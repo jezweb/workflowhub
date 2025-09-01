@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Copy, ExternalLink, FileText, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Edit2, Trash2, Copy, ExternalLink, FileText, Eye, Settings2, Globe } from 'lucide-react';
 
 interface Form {
   id: string;
@@ -17,6 +18,7 @@ interface Form {
 }
 
 export default function FormsPage() {
+  const navigate = useNavigate();
   const [forms, setForms] = useState<Form[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditor, setShowEditor] = useState(false);
@@ -117,43 +119,67 @@ export default function FormsPage() {
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <h3 className="text-lg font-semibold text-gray-900">{form.name}</h3>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
+                    <span className={`px-2 py-1 text-xs rounded-full flex items-center gap-1 ${
                       form.is_published 
                         ? 'bg-green-100 text-green-700' 
-                        : 'bg-gray-100 text-gray-600'
+                        : 'bg-yellow-100 text-yellow-700'
                     }`}>
-                      {form.is_published ? 'Published' : 'Draft'}
+                      {form.is_published ? (
+                        <>
+                          <Globe size={12} />
+                          Live
+                        </>
+                      ) : (
+                        <>Draft</>
+                      )}
                     </span>
                   </div>
                   {form.description && (
                     <p className="text-gray-600 mb-3">{form.description}</p>
                   )}
-                  <div className="text-sm text-gray-500">
-                    Slug: <code className="bg-gray-100 px-2 py-1 rounded">{form.slug}</code>
+                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                    <div>
+                      URL: <code className="bg-gray-100 px-2 py-1 rounded">/form/{form.slug}</code>
+                    </div>
+                    {!form.is_published && (
+                      <span className="text-yellow-600 text-xs">⚠️ Publish to make accessible</span>
+                    )}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => navigate(`/forms/${form.id}/edit`)}
+                    className="px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-1"
+                    title="Edit form fields"
+                  >
+                    <Settings2 size={16} />
+                    Edit Fields
+                  </button>
                   <button
                     onClick={() => {
                       setEditingForm(form);
                       setShowEditor(true);
                     }}
                     className="p-2 text-gray-600 hover:bg-gray-100 rounded"
-                    title="Edit form"
+                    title="Edit form settings"
                   >
                     <Edit2 size={18} />
                   </button>
                   <button
-                    onClick={() => window.open(`/forms/${form.id}/submissions`, '_blank')}
+                    onClick={() => window.open(getPublicUrl(form.slug), '_blank')}
                     className="p-2 text-gray-600 hover:bg-gray-100 rounded"
-                    title="View submissions"
+                    title="Preview form"
                   >
                     <Eye size={18} />
                   </button>
                   <button
                     onClick={() => handlePublish(form)}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded"
-                    title={form.is_published ? 'Unpublish' : 'Publish'}
+                    className={`p-2 rounded ${
+                      form.is_published 
+                        ? 'text-gray-600 hover:bg-gray-100' 
+                        : 'text-green-600 hover:bg-green-50'
+                    }`}
+                    title={form.is_published ? 'Unpublish form' : 'Publish form'}
                   >
                     <ExternalLink size={18} />
                   </button>
@@ -174,9 +200,25 @@ export default function FormsPage() {
                 </div>
               </div>
               {form.is_published && (
-                <div className="mt-4 p-3 bg-gray-50 rounded text-xs">
-                  <div className="text-gray-600 mb-1">Public URL:</div>
-                  <code className="text-blue-600">{getPublicUrl(form.slug)}</code>
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm">
+                      <span className="text-gray-600">Public form is live at: </span>
+                      <a 
+                        href={getPublicUrl(form.slug)} 
+                        target="_blank" 
+                        className="text-blue-600 hover:underline"
+                      >
+                        {getPublicUrl(form.slug)}
+                      </a>
+                    </div>
+                    <button
+                      onClick={() => copyToClipboard(getPublicUrl(form.slug))}
+                      className="text-xs text-blue-600 hover:text-blue-700"
+                    >
+                      Copy Link
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -188,9 +230,13 @@ export default function FormsPage() {
         <FormEditor
           form={editingForm}
           onClose={() => setShowEditor(false)}
-          onSave={() => {
+          onSave={(newFormId?: string) => {
             setShowEditor(false);
             fetchForms();
+            // If this was a new form creation, navigate to field editor
+            if (!editingForm && newFormId) {
+              navigate(`/forms/${newFormId}/edit`);
+            }
           }}
         />
       )}
@@ -201,7 +247,7 @@ export default function FormsPage() {
 interface FormEditorProps {
   form: Form | null;
   onClose: () => void;
-  onSave: () => void;
+  onSave: (newFormId?: string) => void;
 }
 
 function FormEditor({ form, onClose, onSave }: FormEditorProps) {
@@ -222,13 +268,17 @@ function FormEditor({ form, onClose, onSave }: FormEditorProps) {
       const url = form ? `/api/forms/${form.id}` : '/api/forms';
       const method = form ? 'PUT' : 'POST';
       
-      await fetch(url, {
+      const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       
-      onSave();
+      if (response.ok) {
+        const result = await response.json();
+        // Pass the new form ID back if this was a creation
+        onSave(!form ? result.id : undefined);
+      }
     } catch (error) {
       console.error('Failed to save form:', error);
     }
@@ -276,10 +326,13 @@ function FormEditor({ form, onClose, onSave }: FormEditorProps) {
             <input
               type="text"
               value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+              onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
               placeholder="auto-generated-from-name"
               className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Public form will be accessible at: /form/{formData.slug || 'your-slug-here'}
+            </p>
           </div>
           
           <div>
@@ -321,28 +374,25 @@ function FormEditor({ form, onClose, onSave }: FormEditorProps) {
             />
           </div>
           
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-            >
-              {form ? 'Save Changes' : 'Create Form'}
-            </button>
-            {form && (
-              <a
-                href={`/forms/${form.id}/edit`}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          <div className="flex justify-between items-center pt-4">
+            <div className="text-sm text-gray-500">
+              {!form && "You'll be able to add fields after creating the form"}
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
               >
-                Edit Fields
-              </a>
-            )}
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+              >
+                {form ? 'Save Changes' : 'Create Form & Add Fields'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

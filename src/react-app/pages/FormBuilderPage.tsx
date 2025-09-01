@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, Trash2, GripVertical, Save, ArrowLeft, Eye } from 'lucide-react';
+import { Plus, GripVertical, ArrowLeft, Eye } from 'lucide-react';
 
 interface FormField {
   id?: string;
