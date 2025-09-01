@@ -1,70 +1,138 @@
 # WorkflowHub
 
-Business workflow management dashboard with n8n integration, built on Cloudflare Workers.
+A comprehensive business workflow management dashboard with n8n integration, built on Cloudflare Workers with React.
+
+🚀 **Live Demo**: [https://workflowhub.webfonts.workers.dev](https://workflowhub.webfonts.workers.dev)  
+📦 **Repository**: [https://github.com/jezweb/workflowhub](https://github.com/jezweb/workflowhub)
 
 ## Features
 
-- 📁 **Chat System** - Multi-threaded conversations organized in folders with n8n webhook integration
-- 📂 **File Manager** - R2-powered file storage with upload/download capabilities
-- 🎯 **Action Dashboard** - Customizable buttons to trigger n8n workflows
-- 📊 **Data Viewer** - Browse and manage D1 database tables
-- ⚙️ **Settings Manager** - Key-value configuration storage using KV
+- 🎯 **Action Buttons Dashboard** - Quick-trigger workflows with customizable buttons
+- 💬 **Multi-threaded Chat System** - Organized conversations with folder-based webhook routing
+- 📁 **File Management** - R2-powered file storage with upload/download capabilities
+- 🗄️ **D1 Database Viewer** - Browse and query your database directly
+- ⚙️ **Settings Manager** - Configure buttons, folders, and system settings via KV storage
 
 ## Tech Stack
 
-- **Frontend**: React 19 + TypeScript + Vite 6
+- **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS v3
 - **Backend**: Cloudflare Workers with Hono
-- **Database**: Cloudflare D1 (SQLite)
-- **Storage**: Cloudflare R2 (Object Storage)
-- **Cache**: Cloudflare KV
-- **Styling**: Tailwind CSS v4
+- **Storage**: Cloudflare D1 (SQLite), R2 (Object Storage), KV (Cache)
+- **Deployment**: Cloudflare Workers with Static Assets
 
 ## Quick Start
 
-```bash
-# Install dependencies
-npm install
+### Prerequisites
 
-# Run development server
-npm run dev
+- Node.js 18+
+- npm or pnpm
+- Cloudflare account
+- Wrangler CLI installed (`npm install -g wrangler`)
 
-# Build for production
-npm run build
+### Installation & Deployment
 
-# Deploy to Cloudflare
-npm run deploy
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/jezweb/workflowhub.git
+   cd workflowhub
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set your Cloudflare account ID**
+   ```bash
+   export CLOUDFLARE_ACCOUNT_ID="your-account-id"
+   ```
+
+4. **Create Cloudflare resources**
+   ```bash
+   # Create D1 database
+   npx wrangler d1 create workflowhub-db
+   
+   # Create R2 bucket
+   npx wrangler r2 bucket create workflowhub-files
+   
+   # Create KV namespace
+   npx wrangler kv namespace create CACHE
+   ```
+
+5. **Update wrangler.jsonc with the IDs from step 4**
+   - Replace `YOUR_D1_DATABASE_ID` with the database ID
+   - Replace `YOUR_KV_NAMESPACE_ID` with the KV namespace ID
+
+6. **Apply database migrations**
+   ```bash
+   npx wrangler d1 migrations apply workflowhub-db --local
+   npx wrangler d1 migrations apply workflowhub-db --remote
+   ```
+
+7. **Build and deploy**
+   ```bash
+   npm run build
+   npm run deploy
+   ```
+
+Your application will be deployed to `https://[your-subdomain].workers.dev`
+
+### Configure n8n Webhooks
+
+1. Update the `DEFAULT_WEBHOOK_URL` in `wrangler.jsonc` with your n8n webhook URL
+2. Configure individual folder webhooks in the Settings page of the deployed app
+3. Action buttons can trigger different n8n workflows via their webhook URLs
 
 ## Development
 
 ```bash
-# Type checking
-npm run check
-
-# Linting
-npm run lint
-
-# Preview production build
-npm run preview
+npm run dev        # Start local development server
+npm run build      # Build for production
+npm run check      # TypeScript and build validation
+npm run deploy     # Deploy to Cloudflare
 ```
 
 ## Project Structure
 
 ```
 workflowhub/
-├── src/              # React frontend
-├── worker/           # API endpoints
-├── migrations/       # D1 database schemas
-└── public/           # Static assets
+├── src/
+│   ├── worker/          # Cloudflare Worker API endpoints
+│   │   └── index.ts     # Main worker with Hono routes
+│   └── react-app/       # React frontend
+│       ├── App.tsx      # Main app component
+│       └── pages/       # Page components
+├── migrations/          # D1 database migrations
+├── public/             # Static assets
+├── wrangler.jsonc      # Cloudflare configuration
+└── vite.config.ts      # Vite configuration
 ```
 
-## Environment Setup
+## API Endpoints
 
-1. Create D1 database: `wrangler d1 create workflowhub-db`
-2. Create R2 bucket: `wrangler r2 bucket create workflowhub-files`
-3. Create KV namespace: `wrangler kv namespace create CACHE`
-4. Update `wrangler.json` with the generated IDs
+- `GET /api/buttons` - List action buttons
+- `POST /api/buttons/:id/trigger` - Trigger button webhook
+- `GET /api/chat/folders` - List chat folders
+- `POST /api/chat/threads/:id/messages` - Send chat message
+- `GET /api/files` - List files in R2
+- `POST /api/files/upload` - Upload file to R2
+- `GET /api/data/tables` - List D1 tables
+- `POST /api/data/query` - Execute SQL query
+- `GET /api/settings` - Get KV settings
+- `PUT /api/settings/:key` - Update setting
+
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for system design and technical details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
 MIT
+
+## Support
+
+For issues, questions, or suggestions, please [open an issue](https://github.com/jezweb/workflowhub/issues) on GitHub.
