@@ -143,11 +143,81 @@ app.post("/api/chat/threads/:threadId/messages", async (c) => {
 app.get("/api/buttons", async (c) => {
   try {
     const result = await c.env.DB.prepare(
-      "SELECT * FROM action_buttons WHERE enabled = 1 ORDER BY position, label"
+      `SELECT b.*, c.name as collection_name, c.color as collection_color 
+       FROM action_buttons b 
+       LEFT JOIN button_collections c ON b.collection_id = c.id 
+       WHERE b.enabled = 1 
+       ORDER BY b.position, b.label`
     ).all();
     return c.json(result.results);
   } catch (error) {
     return c.json({ error: "Failed to fetch buttons" }, 500);
+  }
+});
+
+app.post("/api/buttons", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { label, icon, color, webhook_url, webhook_method, webhook_headers, position, enabled, collection_id } = body;
+    
+    const result = await c.env.DB.prepare(
+      `INSERT INTO action_buttons (label, icon, color, webhook_url, webhook_method, webhook_headers, position, enabled, collection_id) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+    ).bind(
+      label, 
+      icon || null, 
+      color || '#3b82f6', 
+      webhook_url, 
+      webhook_method || 'POST',
+      JSON.stringify(webhook_headers || {}),
+      position || 0,
+      enabled !== false ? 1 : 0,
+      collection_id || null
+    ).first();
+    
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: "Failed to create button" }, 500);
+  }
+});
+
+app.put("/api/buttons/:id", async (c) => {
+  try {
+    const buttonId = c.req.param("id");
+    const body = await c.req.json();
+    const { label, icon, color, webhook_url, webhook_method, webhook_headers, position, enabled, collection_id } = body;
+    
+    const result = await c.env.DB.prepare(
+      `UPDATE action_buttons 
+       SET label = ?, icon = ?, color = ?, webhook_url = ?, webhook_method = ?, 
+           webhook_headers = ?, position = ?, enabled = ?, collection_id = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? RETURNING *`
+    ).bind(
+      label,
+      icon,
+      color,
+      webhook_url,
+      webhook_method || 'POST',
+      JSON.stringify(webhook_headers || {}),
+      position || 0,
+      enabled !== false ? 1 : 0,
+      collection_id,
+      buttonId
+    ).first();
+    
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: "Failed to update button" }, 500);
+  }
+});
+
+app.delete("/api/buttons/:id", async (c) => {
+  try {
+    const buttonId = c.req.param("id");
+    await c.env.DB.prepare("DELETE FROM action_buttons WHERE id = ?").bind(buttonId).run();
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: "Failed to delete button" }, 500);
   }
 });
 
@@ -177,6 +247,90 @@ app.post("/api/buttons/:id/trigger", async (c) => {
     return c.json(data);
   } catch (error) {
     return c.json({ error: "Failed to trigger button" }, 500);
+  }
+});
+
+// Button Collections
+app.get("/api/collections", async (c) => {
+  try {
+    const result = await c.env.DB.prepare(
+      `SELECT c.*, COUNT(b.id) as button_count 
+       FROM button_collections c 
+       LEFT JOIN action_buttons b ON c.id = b.collection_id AND b.enabled = 1
+       GROUP BY c.id 
+       ORDER BY c.position, c.name`
+    ).all();
+    return c.json(result.results);
+  } catch (error) {
+    return c.json({ error: "Failed to fetch collections" }, 500);
+  }
+});
+
+app.post("/api/collections", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { name, description, icon, color } = body;
+    
+    const result = await c.env.DB.prepare(
+      `INSERT INTO button_collections (name, description, icon, color) 
+       VALUES (?, ?, ?, ?) RETURNING *`
+    ).bind(name, description || null, icon || null, color || '#3b82f6')
+     .first();
+    
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: "Failed to create collection" }, 500);
+  }
+});
+
+app.put("/api/collections/:id", async (c) => {
+  try {
+    const collectionId = c.req.param("id");
+    const body = await c.req.json();
+    const { name, description, icon, color, position, collapsed } = body;
+    
+    const result = await c.env.DB.prepare(
+      `UPDATE button_collections 
+       SET name = ?, description = ?, icon = ?, color = ?, position = ?, collapsed = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? RETURNING *`
+    ).bind(name, description, icon, color, position, collapsed ? 1 : 0, collectionId)
+     .first();
+    
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: "Failed to update collection" }, 500);
+  }
+});
+
+app.delete("/api/collections/:id", async (c) => {
+  try {
+    const collectionId = c.req.param("id");
+    
+    // First unassign all buttons from this collection
+    await c.env.DB.prepare(
+      "UPDATE action_buttons SET collection_id = NULL WHERE collection_id = ?"
+    ).bind(collectionId).run();
+    
+    // Then delete the collection
+    await c.env.DB.prepare(
+      "DELETE FROM button_collections WHERE id = ?"
+    ).bind(collectionId).run();
+    
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: "Failed to delete collection" }, 500);
+  }
+});
+
+app.get("/api/collections/:id/buttons", async (c) => {
+  try {
+    const collectionId = c.req.param("id");
+    const result = await c.env.DB.prepare(
+      "SELECT * FROM action_buttons WHERE collection_id = ? AND enabled = 1 ORDER BY position, label"
+    ).bind(collectionId).all();
+    return c.json(result.results);
+  } catch (error) {
+    return c.json({ error: "Failed to fetch collection buttons" }, 500);
   }
 });
 

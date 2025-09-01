@@ -7,11 +7,12 @@ A comprehensive business workflow management dashboard with n8n integration, bui
 
 ## Features
 
-- 🎯 **Action Buttons Dashboard** - Quick-trigger workflows with customizable buttons
+- 🎯 **Action Buttons Dashboard** - Quick-trigger workflows with customizable buttons organized in collections
 - 💬 **Multi-threaded Chat System** - Organized conversations with folder-based webhook routing
 - 📁 **File Management** - R2-powered file storage with upload/download capabilities
 - 🗄️ **D1 Database Viewer** - Browse and query your database directly
-- ⚙️ **Settings Manager** - Configure buttons, folders, and system settings via KV storage
+- ⚙️ **Settings Manager** - Configure buttons, folders, collections, and system settings via KV storage
+- 📂 **Button Collections** - Organize dashboard buttons into thematic groups with descriptions
 
 ## Tech Stack
 
@@ -110,12 +111,30 @@ workflowhub/
 
 ## API Endpoints
 
-- `GET /api/buttons` - List action buttons
+### Action Buttons & Collections
+- `GET /api/buttons` - List action buttons with collection info
+- `POST /api/buttons` - Create new button
+- `PUT /api/buttons/:id` - Update button
+- `DELETE /api/buttons/:id` - Delete button
 - `POST /api/buttons/:id/trigger` - Trigger button webhook
+- `GET /api/collections` - List button collections
+- `POST /api/collections` - Create collection
+- `PUT /api/collections/:id` - Update collection
+- `DELETE /api/collections/:id` - Delete collection
+- `GET /api/collections/:id/buttons` - Get buttons in collection
+
+### Chat System
 - `GET /api/chat/folders` - List chat folders
+- `POST /api/chat/folders` - Create chat folder
+- `GET /api/chat/folders/:id/threads` - List threads in folder
 - `POST /api/chat/threads/:id/messages` - Send chat message
+
+### File Management
 - `GET /api/files` - List files in R2
 - `POST /api/files/upload` - Upload file to R2
+- `DELETE /api/files/:key` - Delete file
+
+### Database & Settings
 - `GET /api/data/tables` - List D1 tables
 - `POST /api/data/query` - Execute SQL query
 - `GET /api/settings` - Get KV settings

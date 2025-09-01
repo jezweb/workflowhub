@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, Edit2, Webhook } from 'lucide-react';
+import { Save, Plus, Trash2, Edit2, Webhook, Folder } from 'lucide-react';
 
 interface Setting {
   key: string;
@@ -15,6 +15,7 @@ interface ActionButton {
   webhook_url: string;
   position: number;
   enabled: boolean;
+  collection_id?: string;
 }
 
 interface ChatFolder {
@@ -24,19 +25,32 @@ interface ChatFolder {
   webhook_url: string;
 }
 
+interface ButtonCollection {
+  id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  color: string;
+  position: number;
+  button_count?: number;
+}
+
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Setting[]>([]);
   const [buttons, setButtons] = useState<ActionButton[]>([]);
   const [folders, setFolders] = useState<ChatFolder[]>([]);
-  const [activeTab, setActiveTab] = useState<'general' | 'buttons' | 'folders'>('general');
+  const [collections, setCollections] = useState<ButtonCollection[]>([]);
+  const [activeTab, setActiveTab] = useState<'general' | 'buttons' | 'folders' | 'collections'>('general');
   const [editingButton, setEditingButton] = useState<string | null>(null);
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
+  const [editingCollection, setEditingCollection] = useState<string | null>(null);
   const [newSetting, setNewSetting] = useState({ key: '', value: '' });
 
   useEffect(() => {
     fetchSettings();
     fetchButtons();
     fetchFolders();
+    fetchCollections();
   }, []);
 
   const fetchSettings = async () => {
@@ -69,6 +83,16 @@ export default function SettingsPage() {
       setFolders(data);
     } catch (error) {
       console.error('Failed to fetch folders:', error);
+    }
+  };
+
+  const fetchCollections = async () => {
+    try {
+      const response = await fetch('/api/collections');
+      const data = await response.json();
+      setCollections(data);
+    } catch (error) {
+      console.error('Failed to fetch collections:', error);
     }
   };
 
@@ -164,6 +188,41 @@ export default function SettingsPage() {
     }
   };
 
+  const saveCollection = async (collection: ButtonCollection) => {
+    try {
+      const method = collection.id.startsWith('new-') ? 'POST' : 'PUT';
+      const url = collection.id.startsWith('new-') 
+        ? '/api/collections'
+        : `/api/collections/${collection.id}`;
+      
+      await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(collection),
+      });
+      
+      setEditingCollection(null);
+      fetchCollections();
+      fetchButtons(); // Refresh buttons to show updated collection assignments
+    } catch (error) {
+      console.error('Failed to save collection:', error);
+    }
+  };
+
+  const deleteCollection = async (collectionId: string) => {
+    if (!confirm('Are you sure you want to delete this collection? Buttons will be unassigned but not deleted.')) return;
+    
+    try {
+      await fetch(`/api/collections/${collectionId}`, {
+        method: 'DELETE',
+      });
+      fetchCollections();
+      fetchButtons();
+    } catch (error) {
+      console.error('Failed to delete collection:', error);
+    }
+  };
+
   return (
     <div>
       <div className="mb-6">
@@ -205,6 +264,16 @@ export default function SettingsPage() {
             }`}
           >
             Chat Folders
+          </button>
+          <button
+            onClick={() => setActiveTab('collections')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'collections'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Button Collections
           </button>
         </nav>
       </div>
@@ -335,6 +404,21 @@ export default function SettingsPage() {
                       }}
                       className="w-12 h-8"
                     />
+                    <select
+                      value={button.collection_id || ''}
+                      onChange={(e) => {
+                        const updated = buttons.map(b =>
+                          b.id === button.id ? { ...b, collection_id: e.target.value || undefined } : b
+                        );
+                        setButtons(updated);
+                      }}
+                      className="px-2 py-1 border rounded"
+                    >
+                      <option value="">No Collection</option>
+                      {collections.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
                     <button
                       onClick={() => saveButton(button)}
                       className="text-green-600"
@@ -354,6 +438,12 @@ export default function SettingsPage() {
                     <div className="flex-1">
                       <div className="font-medium">{button.label}</div>
                       <div className="text-sm text-gray-500">{button.webhook_url}</div>
+                      {button.collection_id && (
+                        <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                          <Folder size={12} />
+                          {collections.find(c => c.id === button.collection_id)?.name || 'Unknown Collection'}
+                        </div>
+                      )}
                     </div>
                     <div
                       className="w-6 h-6 rounded"
@@ -498,6 +588,129 @@ export default function SettingsPage() {
             >
               <Plus size={20} className="mx-auto" />
               Add New Folder
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Button Collections Tab */}
+      {activeTab === 'collections' && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="space-y-4">
+            {collections.map((collection) => (
+              <div key={collection.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                {editingCollection === collection.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={collection.icon || ''}
+                      onChange={(e) => {
+                        const updated = collections.map(c =>
+                          c.id === collection.id ? { ...c, icon: e.target.value } : c
+                        );
+                        setCollections(updated);
+                      }}
+                      placeholder="Icon"
+                      className="w-16 px-2 py-1 border rounded"
+                    />
+                    <input
+                      type="text"
+                      value={collection.name}
+                      onChange={(e) => {
+                        const updated = collections.map(c =>
+                          c.id === collection.id ? { ...c, name: e.target.value } : c
+                        );
+                        setCollections(updated);
+                      }}
+                      placeholder="Name"
+                      className="flex-1 px-2 py-1 border rounded"
+                    />
+                    <input
+                      type="text"
+                      value={collection.description || ''}
+                      onChange={(e) => {
+                        const updated = collections.map(c =>
+                          c.id === collection.id ? { ...c, description: e.target.value } : c
+                        );
+                        setCollections(updated);
+                      }}
+                      placeholder="Description"
+                      className="flex-1 px-2 py-1 border rounded"
+                    />
+                    <input
+                      type="color"
+                      value={collection.color}
+                      onChange={(e) => {
+                        const updated = collections.map(c =>
+                          c.id === collection.id ? { ...c, color: e.target.value } : c
+                        );
+                        setCollections(updated);
+                      }}
+                      className="w-12 h-8"
+                    />
+                    <button
+                      onClick={() => saveCollection(collection)}
+                      className="text-green-600"
+                    >
+                      <Save size={18} />
+                    </button>
+                    <button
+                      onClick={() => setEditingCollection(null)}
+                      className="text-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-2xl">{collection.icon || '📂'}</span>
+                    <div className="flex-1">
+                      <div className="font-medium">{collection.name}</div>
+                      {collection.description && (
+                        <div className="text-sm text-gray-500">{collection.description}</div>
+                      )}
+                      <div className="text-xs text-gray-400 mt-1">
+                        {collection.button_count || 0} button{collection.button_count !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                    <div
+                      className="w-6 h-6 rounded"
+                      style={{ backgroundColor: collection.color }}
+                    />
+                    <button
+                      onClick={() => setEditingCollection(collection.id)}
+                      className="text-blue-600"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                    <button
+                      onClick={() => deleteCollection(collection.id)}
+                      className="text-red-600"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+
+            <button
+              onClick={() => {
+                const newCollection: ButtonCollection = {
+                  id: `new-${Date.now()}`,
+                  name: 'New Collection',
+                  description: '',
+                  icon: '📂',
+                  color: '#3b82f6',
+                  position: collections.length,
+                };
+                setCollections([...collections, newCollection]);
+                setEditingCollection(newCollection.id);
+              }}
+              className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 text-gray-600"
+            >
+              <Plus size={20} className="mx-auto" />
+              Add New Collection
             </button>
           </div>
         </div>
