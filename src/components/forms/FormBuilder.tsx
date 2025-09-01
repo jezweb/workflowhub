@@ -1,0 +1,359 @@
+import { useState } from 'react';
+import { Plus, Trash2, GripVertical, Eye, Save } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { FormField, FieldType, Form, FormSettings } from '@/types/form';
+import { FieldEditor } from './FieldEditor';
+import { FormPreview } from './FormPreview';
+
+interface FormBuilderProps {
+  form?: Form;
+  onSave: (form: Partial<Form>) => void;
+}
+
+export function FormBuilder({ form, onSave }: FormBuilderProps) {
+  const [name, setName] = useState(form?.name || '');
+  const [description, setDescription] = useState(form?.description || '');
+  const [fields, setFields] = useState<FormField[]>(form?.fields || []);
+  const [settings, setSettings] = useState<FormSettings>(form?.settings || {});
+  const [isPublic, setIsPublic] = useState(form?.is_public || false);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('build');
+
+  const addField = (type: FieldType) => {
+    const newField: FormField = {
+      id: crypto.randomUUID(),
+      type,
+      label: `New ${type} field`,
+      name: `field_${Date.now()}`,
+      width: 'full',
+      required: false
+    };
+    setFields([...fields, newField]);
+    setSelectedField(newField.id);
+  };
+
+  const updateField = (id: string, updates: Partial<FormField>) => {
+    setFields(fields.map(field => 
+      field.id === id ? { ...field, ...updates } : field
+    ));
+  };
+
+  const deleteField = (id: string) => {
+    setFields(fields.filter(field => field.id !== id));
+    if (selectedField === id) {
+      setSelectedField(null);
+    }
+  };
+
+  const moveField = (index: number, direction: 'up' | 'down') => {
+    const newFields = [...fields];
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex >= 0 && newIndex < fields.length) {
+      [newFields[index], newFields[newIndex]] = [newFields[newIndex], newFields[index]];
+      setFields(newFields);
+    }
+  };
+
+  const handleSave = () => {
+    onSave({
+      name,
+      description,
+      fields,
+      settings,
+      is_public: isPublic
+    });
+  };
+
+  const fieldTypes: { type: FieldType; label: string }[] = [
+    { type: 'text', label: 'Text' },
+    { type: 'email', label: 'Email' },
+    { type: 'number', label: 'Number' },
+    { type: 'textarea', label: 'Text Area' },
+    { type: 'select', label: 'Dropdown' },
+    { type: 'checkbox', label: 'Checkbox' },
+    { type: 'radio', label: 'Radio' },
+    { type: 'date', label: 'Date' },
+    { type: 'time', label: 'Time' },
+    { type: 'file', label: 'File Upload' },
+    { type: 'url', label: 'URL' },
+    { type: 'tel', label: 'Phone' }
+  ];
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Form Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="name">Form Name</Label>
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Contact Form"
+            />
+          </div>
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
+              placeholder="Optional form description"
+              rows={3}
+            />
+          </div>
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="public"
+              checked={isPublic}
+              onCheckedChange={setIsPublic}
+            />
+            <Label htmlFor="public">Make form public</Label>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="build">Build</TabsTrigger>
+          <TabsTrigger value="preview">Preview</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="build" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Add Fields</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                {fieldTypes.map(({ type, label }) => (
+                  <Button
+                    key={type}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => addField(type)}
+                  >
+                    <Plus className="mr-1 h-3 w-3" />
+                    {label}
+                  </Button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Form Fields</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {fields.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">
+                    No fields added yet. Click a field type above to add.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {fields.map((field, index) => (
+                      <div
+                        key={field.id}
+                        className={`flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 ${
+                          selectedField === field.id ? 'ring-2 ring-blue-500' : ''
+                        }`}
+                        onClick={() => setSelectedField(field.id)}
+                      >
+                        <GripVertical className="h-4 w-4 text-gray-400" />
+                        <div className="flex-1">
+                          <div className="font-medium">{field.label}</div>
+                          <div className="text-sm text-gray-500">
+                            {field.type} · {field.width} width {field.required && '· Required'}
+                          </div>
+                        </div>
+                        <div className="flex space-x-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveField(index, 'up');
+                            }}
+                            disabled={index === 0}
+                          >
+                            ↑
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              moveField(index, 'down');
+                            }}
+                            disabled={index === fields.length - 1}
+                          >
+                            ↓
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteField(field.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Field Properties</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedField ? (
+                  <FieldEditor
+                    field={fields.find(f => f.id === selectedField)!}
+                    onChange={(updates) => updateField(selectedField, updates)}
+                  />
+                ) : (
+                  <p className="text-center text-gray-500 py-8">
+                    Select a field to edit its properties
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="preview">
+          <Card>
+            <CardHeader>
+              <CardTitle>Form Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormPreview
+                name={name}
+                description={description}
+                fields={fields}
+                settings={settings}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Submission Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="submitButton">Submit Button Text</Label>
+                <Input
+                  id="submitButton"
+                  value={settings.submitButtonText || ''}
+                  onChange={(e) => setSettings({ ...settings, submitButtonText: e.target.value })}
+                  placeholder="Submit"
+                />
+              </div>
+              <div>
+                <Label htmlFor="successMessage">Success Message</Label>
+                <Textarea
+                  id="successMessage"
+                  value={settings.successMessage || ''}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setSettings({ ...settings, successMessage: e.target.value })}
+                  placeholder="Thank you for your submission!"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <Label htmlFor="redirectUrl">Redirect URL (after submission)</Label>
+                <Input
+                  id="redirectUrl"
+                  type="url"
+                  value={settings.redirectUrl || ''}
+                  onChange={(e) => setSettings({ ...settings, redirectUrl: e.target.value })}
+                  placeholder="https://example.com/thank-you"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Integrations</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="webhookUrl">Webhook URL</Label>
+                <Input
+                  id="webhookUrl"
+                  type="url"
+                  value={settings.webhookUrl || ''}
+                  onChange={(e) => setSettings({ ...settings, webhookUrl: e.target.value })}
+                  placeholder="https://example.com/webhook"
+                />
+              </div>
+              {settings.webhookUrl && (
+                <div>
+                  <Label htmlFor="webhookMethod">Webhook Method</Label>
+                  <Select
+                    value={settings.webhookMethod || 'POST'}
+                    onValueChange={(value: 'GET' | 'POST' | 'PUT') => 
+                      setSettings({ ...settings, webhookMethod: value })
+                    }
+                  >
+                    <SelectTrigger id="webhookMethod">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="GET">GET</SelectItem>
+                      <SelectItem value="POST">POST</SelectItem>
+                      <SelectItem value="PUT">PUT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div>
+                <Label htmlFor="emailNotification">Email Notifications</Label>
+                <Input
+                  id="emailNotification"
+                  type="email"
+                  value={settings.emailNotification || ''}
+                  onChange={(e) => setSettings({ ...settings, emailNotification: e.target.value })}
+                  placeholder="admin@example.com"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" onClick={() => setActiveTab('preview')}>
+          <Eye className="mr-2 h-4 w-4" />
+          Preview
+        </Button>
+        <Button onClick={handleSave}>
+          <Save className="mr-2 h-4 w-4" />
+          Save Form
+        </Button>
+      </div>
+    </div>
+  );
+}

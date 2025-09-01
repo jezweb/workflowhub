@@ -1,0 +1,25 @@
+name = "workflowhub"
+main = "src/worker/index.ts"
+compatibility_date = "2024-12-20"
+compatibility_flags = ["nodejs_compat"]
+account_id = "0460574641fdbb98159c98ebf593e2bd"
+
+# Static assets
+[site]
+bucket = "./dist"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "workflowhub"
+database_id = "b8a61769-5479-4b7d-acbb-904159de6d36"
+
+# R2 Storage
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "workflowhub-files"
+
+# Environment variables
+[vars]
+JWT_SECRET = "change-this-in-production"
+CORS_ORIGIN = "https://workflowhub.yourdomain.com"

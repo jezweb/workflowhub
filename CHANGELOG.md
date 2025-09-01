@@ -2,90 +2,117 @@
 
 All notable changes to WorkflowHub will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-## [0.3.0] - 2025-09-01
+## [2.0.0] - 2025-09-01
 
 ### Added
-- **Forms Builder** - Complete forms functionality for data collection
-  - Visual form builder with field management
-  - Support for multiple field types (text, email, number, textarea, select, radio, checkbox, file, date, time, tel, url)
-  - Field validation with custom patterns and messages
-  - Required fields and help text support
-  - Public form access via custom slugs
-  - File upload support with R2 integration
-  - Form submissions stored in D1 database
-  - Webhook integration for form data
-  - Success messages and optional redirect URLs
-  - Database migration (0003_forms.sql) for forms support
-- New API endpoints for forms management
-  - GET /api/forms - List all forms
-  - POST /api/forms - Create new form
-  - GET /api/forms/:id - Get form with fields
-  - PUT /api/forms/:id - Update form
-  - DELETE /api/forms/:id - Delete form
-  - GET /api/forms/:id/fields - Get form fields
-  - POST /api/forms/:id/fields - Add field to form
-  - PUT /api/fields/:id - Update field
-  - DELETE /api/fields/:id - Delete field
-  - GET /api/forms/:id/submissions - Get form submissions
-  - GET /api/public/form/:slug - Get public form
-  - POST /api/public/form/:slug/submit - Submit form data
-- Forms page with management interface
-- Form builder page for field configuration
-- Public form page for data collection
-- Forms navigation in main menu
+- Complete rewrite from scratch with simplified architecture
+- User authentication system with JWT tokens
+- Visual form builder with flexible field widths (full, 1/2, 1/3, 1/4)
+- Comprehensive action button system with webhook configuration
+  - Support for GET, POST, PUT, DELETE, PATCH methods
+  - Custom headers and payload templates
+  - Dynamic variable substitution
+  - Three response types (modal, toast, page)
+- File management with virtual folders
+- Nested chat conversations with SSE streaming
+- Interactive database viewer with inline editing
+- Customizable dashboard with widgets
+- shadcn/ui component library integration
+- Full TypeScript coverage
 
 ### Changed
-- Updated data viewer to include forms tables
-- Enhanced file upload handling for form submissions
+- Migrated from KV cache to direct D1 queries
+- Simplified state management with Zustand
+- Improved UI/UX with cleaner design
+- Better error handling throughout
+- More intuitive settings management
 
-## [0.2.0] - 2025-09-01
+### Removed
+- KV cache complexity
+- Over-engineered abstractions
+- Multiple authentication systems
+- Unnecessary dependencies
 
-### Added
-- **Button Collections** - New feature for organizing dashboard actions
-  - Create collections with name, description, icon, and color
-  - Group action buttons into thematic collections
-  - Collapsible/expandable collections on dashboard with persistent state
-  - Visual hierarchy with collection headers and descriptions
-  - "Quick Actions" section for ungrouped buttons
-  - Collections management tab in Settings page
-  - Database migration (0002_button_collections.sql) for collections support
-  - Collection assignment dropdown in button editor
-  - Button count indicators for each collection
-- New API endpoints for collections management
-  - GET /api/collections - List all collections with button counts
-  - POST /api/collections - Create new collection
-  - PUT /api/collections/:id - Update collection
-  - DELETE /api/collections/:id - Delete collection
-  - GET /api/collections/:id/buttons - Get buttons in collection
+### Security
+- Implemented bcrypt password hashing
+- Added JWT token expiration
+- Enhanced input validation with Zod
+- Improved CORS configuration
 
-### Changed
-- Enhanced dashboard layout with organized button groups
-- Updated Settings page with new Collections tab
-- Improved button management with collection assignment
-- Updated action_buttons table with collection_id foreign key
-- Better visual organization of workflow triggers
-
-## [0.1.0] - 2025-09-01
+## [1.0.0] - 2025-08-31
 
 ### Added
-- Initial release with core functionality
-- Multi-threaded chat system with folder organization
-- Action buttons dashboard for triggering n8n workflows
-- File management with R2 storage
-- D1 database viewer with SQL query support
-- Settings manager with KV storage
-- n8n webhook integration for all features
-- Responsive web interface with React and Tailwind CSS
-- Cloudflare Workers deployment with static assets
-- Database migrations system
-- Comprehensive API endpoints for all features
+- Initial release
+- Basic dashboard functionality
+- Simple chat system
+- File upload to R2
+- Database viewer
+- Settings management
 
-[Unreleased]: https://github.com/jezweb/workflowhub/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/jezweb/workflowhub/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/jezweb/workflowhub/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/jezweb/workflowhub/releases/tag/v0.1.0
+---
+
+## Upgrade Guide
+
+### From 1.x to 2.0
+
+⚠️ **Breaking Changes**: Version 2.0 is a complete rewrite. Data migration is not supported.
+
+1. **Backup your data**
+   - Export any important data from v1
+   - Save webhook configurations
+   - Document custom settings
+
+2. **Clean installation**
+   - Delete old Cloudflare resources (D1, R2, KV)
+   - Remove old worker deployment
+   - Follow new installation guide
+
+3. **Reconfigure**
+   - Set up new authentication
+   - Recreate forms and buttons
+   - Configure webhooks
+   - Import data manually if needed
+
+### Key Differences
+
+| Feature | v1.0 | v2.0 |
+|---------|------|------|
+| Auth | Token-based | Username/password + JWT |
+| Cache | KV namespace | None (direct D1) |
+| Forms | Basic | Visual builder |
+| UI | Custom CSS | shadcn/ui |
+| Chat | Flat structure | Nested folders |
+| Files | Basic upload | Virtual folders |
+
+## Future Roadmap
+
+### [2.1.0] - Planned
+- [ ] Multi-language support
+- [ ] Advanced form validations
+- [ ] Workflow templates
+- [ ] Batch file operations
+- [ ] API rate limiting
+
+### [2.2.0] - Planned
+- [ ] Real-time collaboration
+- [ ] Advanced dashboard analytics
+- [ ] Plugin system
+- [ ] Mobile app companion
+- [ ] Webhook testing tools
+
+### [3.0.0] - Future
+- [ ] Multi-tenancy support
+- [ ] GraphQL API
+- [ ] WebSocket support
+- [ ] Advanced workflow builder
+- [ ] AI-powered automation
+
+## Support
+
+For questions about upgrading or changelog entries:
+- Open an issue on GitHub
+- Check the documentation
+- Join our Discord community

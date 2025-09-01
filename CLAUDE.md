@@ -1,165 +1,331 @@
-# WorkflowHub Development Guidelines
+# WorkflowHub 2.0 Development Guidelines
 
 ## Project Overview
-WorkflowHub is a business workflow management dashboard with n8n integration, built on Cloudflare Workers.
+WorkflowHub 2.0 is a complete rewrite focused on simplicity, functionality, and clean architecture without over-engineering.
 
-## Code Style Guidelines
+## Key Principles
+1. **Simplicity First** - Avoid premature optimization and over-abstraction
+2. **Working Features** - Prioritize functional code over perfect architecture
+3. **Clean Code** - Self-documenting, minimal comments
+4. **Type Safety** - Full TypeScript coverage
+5. **User Focus** - Build for small teams, not enterprises
 
-### General Principles
-- Keep code simple and modular
-- Avoid over-engineering
-- Write self-documenting code
-- Use TypeScript for type safety
-- Follow existing patterns in the codebase
+## Tech Stack
+
+### Frontend
+- React 19 with functional components and hooks
+- TypeScript 5.8 for type safety
+- shadcn/ui for clean, customizable components
+- Tailwind CSS for utility-first styling
+- React Hook Form + Zod for forms
+- TanStack Query for data fetching
+- Zustand for state management
+
+### Backend
+- Cloudflare Workers with static assets
+- Hono for lightweight routing
+- D1 for SQLite database
+- R2 for file storage
+- JWT for authentication
+
+## Code Style
+
+### General Rules
+- Use TypeScript strict mode
+- Prefer const over let
+- Use async/await over promises
+- Extract reusable logic to hooks/utils
+- Keep functions small and focused
 
 ### React Components
-- Use functional components with hooks
-- Keep components small and focused
-- Extract reusable logic to custom hooks
-- Use TypeScript interfaces for props
-
-### API Design
-- RESTful endpoints
-- Consistent error handling
-- Use proper HTTP status codes
-- Return JSON responses
-
-### File Organization
+```tsx
+// Good: Clean functional component
+export function UserCard({ user }: UserCardProps) {
+  const { logout } = useAuth();
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{user.name}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Button onClick={logout}>Logout</Button>
+      </CardContent>
+    </Card>
+  );
+}
 ```
-src/
-├── components/     # Reusable UI components
-├── pages/         # Page-level components
-├── hooks/         # Custom React hooks
-├── lib/           # Utility functions
-└── types/         # TypeScript type definitions
 
-worker/
-├── routes/        # API route handlers
-├── middleware/    # Request middleware
-└── utils/         # Helper functions
+### API Routes
+```ts
+// Good: Clean route handler
+app.post('/api/forms/:id/submit', authMiddleware, async (c) => {
+  const formId = c.req.param('id');
+  const data = await c.req.json();
+  
+  // Validate with Zod
+  const validated = formSubmissionSchema.parse(data);
+  
+  // Store in D1
+  const result = await c.env.DB
+    .prepare('INSERT INTO submissions ...')
+    .bind(formId, JSON.stringify(validated))
+    .run();
+  
+  // Call webhook
+  await callWebhook(c.env.WEBHOOK_URL, validated);
+  
+  return c.json({ success: true, id: result.meta.last_row_id });
+});
 ```
+
+## File Organization
+
+### Component Structure
+```
+components/
+├── forms/
+│   ├── FormBuilder.tsx      # Main component
+│   ├── FormField.tsx        # Sub-component
+│   ├── types.ts            # TypeScript types
+│   └── utils.ts            # Helper functions
+```
+
+### Naming Conventions
+- Components: PascalCase (`FormBuilder.tsx`)
+- Utilities: camelCase (`utils.ts`)
+- Types: PascalCase (`UserProfile`)
+- Constants: UPPER_SNAKE (`MAX_FILE_SIZE`)
+- CSS classes: kebab-case (`form-field`)
+
+## Database Patterns
+
+### Use Prepared Statements
+```ts
+// Good
+const user = await db
+  .prepare('SELECT * FROM users WHERE id = ?')
+  .bind(userId)
+  .first();
+
+// Bad - SQL injection risk
+const user = await db
+  .prepare(`SELECT * FROM users WHERE id = ${userId}`)
+  .first();
+```
+
+### Handle Transactions
+```ts
+// Good: Use batch for multiple operations
+await db.batch([
+  db.prepare('INSERT INTO forms ...').bind(...),
+  db.prepare('INSERT INTO fields ...').bind(...)
+]);
+```
+
+## Error Handling
+
+### API Errors
+```ts
+// Good: Consistent error responses
+try {
+  const result = await someOperation();
+  return c.json({ success: true, data: result });
+} catch (error) {
+  console.error('Operation failed:', error);
+  return c.json(
+    { success: false, error: 'Operation failed' },
+    400
+  );
+}
+```
+
+### Frontend Errors
+```tsx
+// Good: User-friendly error handling
+const { mutate, isLoading, error } = useMutation({
+  mutationFn: submitForm,
+  onError: (error) => {
+    toast.error(error.message || 'Something went wrong');
+  },
+  onSuccess: () => {
+    toast.success('Form submitted successfully');
+  }
+});
+```
+
+## Testing Strategy
+
+### Unit Tests
+- Test utilities and helpers
+- Test validation schemas
+- Test component logic
+
+### Integration Tests
+- Test API endpoints
+- Test database operations
+- Test webhook calls
+
+### E2E Tests (Optional)
+- Test critical user flows
+- Test form submissions
+- Test file uploads
+
+## Performance Guidelines
+
+### Frontend
+- Lazy load routes
+- Use React.memo for expensive components
+- Virtualize long lists
+- Debounce search inputs
+- Optimize images
+
+### Backend
+- Use indexes on frequently queried columns
+- Paginate large datasets
+- Stream large responses
+- Cache static data in browser
+
+## Security Checklist
+
+### Always
+- [ ] Hash passwords with bcrypt
+- [ ] Validate all inputs with Zod
+- [ ] Use parameterized queries
+- [ ] Sanitize file uploads
+- [ ] Check JWT on protected routes
+- [ ] Set proper CORS headers
+
+### Never
+- [ ] Store secrets in code
+- [ ] Log sensitive data
+- [ ] Trust client-side validation alone
+- [ ] Use eval() or dynamic SQL
+- [ ] Expose internal errors to users
 
 ## Development Workflow
 
-### Testing
-- Write simple unit tests for utilities
-- Test API endpoints with integration tests
-- Use TypeScript for compile-time checks
-- Run `npm run check` before committing
+### Daily Development
+1. Pull latest changes
+2. Create feature branch
+3. Write code with types
+4. Test locally
+5. Run type check: `npm run check`
+6. Commit with clear message
+7. Push and create PR
 
-### Git Commits
-- Use descriptive commit messages
-- Commit logical units of work
-- Run tests before committing
-- Push to remote after successful builds
+### Before Deployment
+1. Run full type check
+2. Test all critical paths
+3. Check console for errors
+4. Verify environment variables
+5. Review security checklist
+6. Deploy to staging first
 
-### Deployment
-- Build locally first: `npm run build`
-- Test the build: `npm run preview`
-- Deploy to Cloudflare: `npm run deploy`
-- Verify deployment in dashboard
+## Common Patterns
 
-## Technology Versions
-- React 19
-- Vite 6
-- TypeScript 5.8
-- Tailwind CSS v4 (when available, use v3 for now)
-- Cloudflare Workers with Static Assets
-- Wrangler 4.x
+### Form Handling
+```tsx
+// Use React Hook Form + Zod
+const schema = z.object({
+  name: z.string().min(1),
+  email: z.string().email()
+});
 
-## n8n Integration
-
-### Webhook Format
-```json
-{
-  "action": "process_message",
-  "data": {
-    "message": "user input",
-    "threadId": "uuid",
-    "metadata": {}
-  }
+function MyForm() {
+  const form = useForm({
+    resolver: zodResolver(schema)
+  });
+  
+  const onSubmit = async (data) => {
+    await api.post('/endpoint', data);
+  };
+  
+  return <form onSubmit={form.handleSubmit(onSubmit)}>...</form>;
 }
 ```
 
-### Response Format
-```json
-{
-  "success": true,
-  "data": {
-    "response": "processed output",
-    "metadata": {}
-  }
+### Data Fetching
+```tsx
+// Use TanStack Query
+function useUsers() {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: () => api.get('/users')
+  });
 }
 ```
 
-## Cloudflare Resources
-
-### Bindings
-- `DB` - D1 database
-- `FILES` - R2 bucket
-- `CACHE` - KV namespace
-
-### Environment Variables
-- `DEFAULT_WEBHOOK_URL` - Default n8n webhook
-- `AUTH_TOKEN` - Authentication token
-
-## Common Tasks
-
-### Add a new API endpoint
-1. Create route handler in `worker/routes/`
-2. Add to router in `worker/index.ts`
-3. Add TypeScript types
-4. Test with curl or Postman
-
-### Add a new page
-1. Create component in `src/pages/`
-2. Add route in `src/App.tsx`
-3. Add navigation link
-4. Test routing
-
-### Update database schema
-1. Create migration file
-2. Test locally with `wrangler d1 execute`
-3. Apply to production with `wrangler d1 migrations apply`
+### State Management
+```ts
+// Use Zustand for global state
+const useAuthStore = create((set) => ({
+  user: null,
+  login: (user) => set({ user }),
+  logout: () => set({ user: null })
+}));
+```
 
 ## Troubleshooting
 
 ### Common Issues
-- **Build errors**: Check TypeScript types
-- **Deploy failures**: Verify wrangler.json config
-- **API errors**: Check worker logs with `wrangler tail`
-- **Database issues**: Verify D1 bindings
 
-### Debug Commands
+**TypeScript errors**: Run `npm run check` to see all errors
+
+**Build failures**: Clear `.wrangler` and `dist` folders
+
+**Database issues**: Check migrations are applied
+
+**Auth problems**: Verify JWT_SECRET is set
+
+**Upload failures**: Check R2 bucket exists and has correct bindings
+
+## Important Notes
+
+### What We're NOT Doing
+- No KV cache (complexity without benefit)
+- No microservices (monolith is fine)
+- No complex state management (Zustand is enough)
+- No custom CSS framework (Tailwind works)
+- No premature optimization
+
+### What We ARE Doing
+- Simple, working features
+- Clean, readable code
+- Proper error handling
+- Type safety everywhere
+- User-friendly interfaces
+
+## Quick Commands
+
 ```bash
-# Check types
-npm run check
+# Development
+npm run dev          # Start dev server
+npm run check        # Type check
+npm run build        # Build for production
+npm run preview      # Test production build
 
-# View logs
-wrangler tail
+# Database
+wrangler d1 execute workflowhub --local --command "SELECT * FROM users"
+wrangler d1 migrations apply workflowhub --local
 
-# Test locally
-npm run dev
+# Deployment
+npm run deploy       # Deploy to Cloudflare
 
-# Test production build
-npm run preview
+# Debugging
+wrangler tail        # View live logs
 ```
 
-## Performance Tips
-- Use KV for caching frequent queries
-- Implement pagination for large datasets
-- Use SSE for real-time updates
-- Optimize bundle size with code splitting
+## Resources
 
-## Security Notes
-- Never commit secrets to git
-- Use environment variables for sensitive data
-- Validate all user inputs
-- Sanitize data before storage
-- Use CORS appropriately
+- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+- [shadcn/ui Components](https://ui.shadcn.com/)
+- [Hono Documentation](https://hono.dev/)
+- [React Hook Form](https://react-hook-form.com/)
+- [TanStack Query](https://tanstack.com/query/)
 
 ## Remember
-- Keep it simple
-- Test before deploying
-- Document significant changes
-- Ask for clarification when needed
+
+> "Make it work, make it right, make it fast" - in that order.
+
+Focus on delivering working features that users need, not perfect code that might be needed someday.

@@ -1,106 +1,146 @@
-# Forms Feature Implementation Scratchpad
+# WorkflowHub 2.0 Development Progress
 
-## Current Status
-Starting implementation of Forms functionality for WorkflowHub
+## Current Status (2025-09-01 22:20)
+Complete rewrite of WorkflowHub with simplified architecture - **MVP WITH FORM BUILDER READY**
+- Frontend: http://localhost:5175
+- Worker API: http://localhost:8787
 
-## Implementation Plan
+## Completed Tasks ✅
 
-### Phase 1: Database Schema ⏳
-- Create migration file 0003_forms.sql
-- Define forms, form_fields, form_submissions tables
-- Add indexes for performance
+### Phase 1: Foundation
+- ✅ Archived v1 code to `v1-archive` branch
+- ✅ Cleaned up Cloudflare resources (deleted old D1 databases)
+- ✅ Created comprehensive planning documentation
+  - ARCHITECTURE.md - System design without KV cache
+  - DEPLOYMENT.md - Production deployment guide
+  - README.md - Project overview
+  - CLAUDE.md - Development guidelines
+  - CHANGELOG.md - Version history
+- ✅ Initialized Vite + React + TypeScript project
+- ✅ Configured shadcn/ui with Tailwind CSS
 
-### Phase 2: API Endpoints
-- Forms CRUD operations
-- Field management
-- Public form submission
-- File upload handling
+### Phase 2: Infrastructure
+- ✅ Created Cloudflare D1 database `workflowhub` (ID: b8a61769-5479-4b7d-acbb-904159de6d36)
+- ✅ Applied initial database schema migration
+- ✅ Configured R2 bucket `workflowhub-files` (already existed)
+- ✅ Created wrangler.toml configuration
+- ✅ Implemented Hono Worker with JWT auth (using Web Crypto API)
+- ✅ Created all API route handlers:
+  - auth.ts - Login, register, verify (TESTED & WORKING)
+  - forms.ts - CRUD operations and submissions
+  - files.ts - File management (stub)
+  - database.ts - Table viewer (stub)
+  - chat.ts - Conversations and messages
+  - actions.ts - Webhook actions
+  - settings.ts - User settings
 
-### Phase 3: UI Components
-- Forms list page
-- Form builder (simplified)
-- Form renderer
-- Public form view
+### Phase 3: Frontend
+- ✅ Set up API client utilities
+- ✅ Created Zustand auth store
+- ✅ Implemented login/register pages with tabs
+- ✅ Created protected route component
+- ✅ Built AppShell layout with responsive sidebar
+- ✅ Created all page components (Dashboard, Forms, Files, Database, Chat, Actions, Settings)
+- ✅ Configured build process
+- ✅ Fixed TypeScript issues
 
-### Phase 4: Integration & Testing
-- Connect to webhooks
-- Test file uploads
-- Verify form submissions
+### Phase 4: Testing
+- ✅ Built frontend successfully
+- ✅ Started Worker locally on port 8787
+- ✅ Started frontend dev server on port 5175
+- ✅ Successfully tested user registration API
+- ✅ Successfully tested user login API
 
-## Design Decisions
+### Phase 5: Form Builder Implementation
+- ✅ Created form types and interfaces
+- ✅ Built FormBuilder component with drag/drop support
+- ✅ Implemented field editor with width configurations (full, 1/2, 1/3, 1/4)
+- ✅ Created form preview component
+- ✅ Integrated FormBuilder with Forms page
+- ✅ Added all necessary shadcn/ui components
+- ✅ Fixed TypeScript errors
 
-### Simplification Choices
-1. **No drag-and-drop initially** - Use simple list with position ordering
-2. **Basic field types only** - text, email, number, textarea, select, checkbox, file
-3. **Simple validation** - Required fields and basic pattern matching
-4. **No multi-step forms** - Single page forms only for MVP
-5. **No conditional logic** - All fields always visible
+## Current Work 🚧
+### Phase 6: Action Button Configuration System (2025-09-01 22:30)
 
-### Technical Choices
-1. **Form data as JSON** - Store form submissions as JSON in database
-2. **File uploads to R2** - Reuse existing R2 bucket for form files
-3. **Webhook retry** - Simple retry logic with exponential backoff
-4. **Public access via slug** - Simple URL-friendly identifiers
+**Goal**: Implement webhook action buttons with configurable HTTP methods, headers, and payload templates
 
-## API Design
+**Implementation Plan**:
+1. Create Action type definitions
+2. Build ActionBuilder component with method selection
+3. Create ActionEditor for headers/payload
+4. Update Actions page with CRUD operations
+5. Add execution with response handling
+6. Test with real webhooks
 
-### Forms Endpoints
+**Progress**:
+- [x] Type definitions created
+- [x] ActionBuilder component built  
+- [x] ActionEditor component created
+- [x] Actions page updated with full CRUD
+- [x] Execution handlers added
+- [x] Response handling (modal, toast, page)
+- [ ] Testing with real webhooks
+
+## How to Use
+1. Open browser to http://localhost:5175
+2. Register a new account or login with testuser/password123
+3. Navigate to Forms section
+4. Click "New Form" to create a form with configurable field widths
+5. Add fields, set widths (full, 1/2, 1/3, 1/4), configure properties
+6. Preview form in the Preview tab
+7. Save form and share the URL
+
+## Next Steps 📋
+1. Add drag-and-drop field reordering
+2. Implement file upload to R2
+3. Add webhook integrations for form submissions
+4. Implement nested chat structure with AI
+5. Create action button configuration
+6. Add database viewer with inline editing
+7. Deploy to production
+
+## Technical Stack
+- **Frontend**: React 19, TypeScript 5.8, shadcn/ui, Tailwind CSS, Zustand, React Hook Form + Zod
+- **Backend**: Cloudflare Workers, Hono, D1 (SQLite), R2 Storage, JWT
+- **Build**: Vite 6, Wrangler
+
+## Key Design Decisions
+1. **No KV Cache** - Direct D1 queries for simplicity
+2. **JWT Auth** - Stateless authentication
+3. **JSON Fields** - Store form fields and settings as JSON
+4. **Nested Chats** - Parent-child conversation structure
+5. **Configurable Actions** - HTTP method and payload templates
+
+## Database Schema Summary
+- `users` - Basic auth with username/email/password
+- `forms` - Form definitions with JSON fields
+- `form_submissions` - Submitted form data
+- `actions` - Webhook configurations
+- `conversations` - Chat threads with nesting
+- `messages` - Chat messages
+- `files` - File metadata (R2 storage)
+- `settings` - Key-value user settings
+
+## API Endpoints Created
 ```
-GET    /api/forms              - List forms
-POST   /api/forms              - Create form
-GET    /api/forms/:id          - Get form with fields
-PUT    /api/forms/:id          - Update form
-DELETE /api/forms/:id          - Delete form
-
-GET    /api/forms/:id/fields   - Get fields
-POST   /api/forms/:id/fields   - Add field
-PUT    /api/fields/:id         - Update field
-DELETE /api/fields/:id         - Delete field
-
-GET    /api/forms/:id/submissions - Get submissions
-GET    /api/public/form/:slug     - Get public form
-POST   /api/public/form/:slug/submit - Submit form
+/api/auth/register     - User registration
+/api/auth/login        - User login
+/api/auth/verify       - Token verification
+/api/forms/*           - Forms CRUD + submissions
+/api/files/*           - File operations
+/api/database/*        - Database viewer
+/api/chat/*            - Chat conversations
+/api/actions/*         - Action buttons
+/api/settings/*        - User settings
 ```
 
-## Progress Log
-- Started: Creating database migration
-- Next: API endpoints
+## Known Issues
+- bcryptjs import may need adjustment for Workers environment
+- File upload implementation pending
+- AI chat integration not implemented
 
----
-
-# Field Labels Bug and Drag-and-Drop Implementation
-
-## Current Issue (2025-09-01)
-- Fields showing "Name0", "Email0", "Phone0" even after removing `{field.position}` from code
-- Drag handle icon is decorative only - no actual reordering functionality
-
-## Investigation Notes
-- Database has correct values: "Name", "Email", "Phone"
-- API returns correct values
-- Deployed JS bundle doesn't contain `field.position` anymore
-- Issue persists in browser - possible caching or another source
-
-## Implementation Plan
-
-### Phase 1: Debug and Fix the "0" Issue
-- [ ] Check for any other places where position might be concatenated
-- [ ] Add temporary debug logging to identify source
-- [ ] Force cache refresh with new bundle
-
-### Phase 2: Implement Drag-and-Drop
-- [ ] Add draggable attributes to field rows
-- [ ] Implement drag event handlers
-- [ ] Update positions on drop
-- [ ] Create API endpoint for batch position updates
-- [ ] Add visual feedback during drag
-
-### Phase 3: Testing and Documentation
-- [ ] Test drag-and-drop with various field configurations
-- [ ] Update documentation
-- [ ] Commit changes
-
-## Technical Decisions
-- Use HTML5 native drag-and-drop API (no external libraries)
-- Keep positions 0-indexed in database for simplicity
-- Batch update positions to minimize API calls
-- Optimistic UI updates with rollback on error
+## Notes
+- Using account ID: 0460574641fdbb98159c98ebf593e2bd
+- JWT secret needs to be changed in production
+- CORS currently allows all origins (update for production)

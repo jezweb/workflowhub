@@ -1,289 +1,469 @@
-# WorkflowHub Deployment Guide
+# WorkflowHub 2.0 Deployment Guide
 
 ## Prerequisites
 
-- Node.js 18+ and npm
-- Cloudflare account
-- Wrangler CLI (`npm install -g wrangler`)
-- n8n instance with webhook endpoints
+### Required Tools
+- Node.js 20+ and npm 10+
+- Wrangler CLI 4.x (`npm install -g wrangler`)
+- Git for version control
+- Cloudflare account with Workers enabled
 
-## Initial Setup
+### Cloudflare Resources Needed
+- Workers (with Static Assets)
+- D1 Database
+- R2 Storage
+- Custom domain (optional)
 
-### 1. Clone and Install
+## Local Development Setup
 
+### 1. Clone Repository
 ```bash
-git clone <repository>
+git clone https://github.com/yourusername/workflowhub.git
 cd workflowhub
+```
+
+### 2. Install Dependencies
+```bash
 npm install
 ```
 
-### 2. Cloudflare Authentication
-
+### 3. Configure Environment
 ```bash
-wrangler login
+# Copy environment template
+cp .env.example .env.local
+
+# Edit with your values
+nano .env.local
 ```
 
-### 3. Create Cloudflare Resources
+Required environment variables:
+```env
+# Cloudflare Account
+CLOUDFLARE_ACCOUNT_ID=your_account_id
 
-#### D1 Database
-```bash
-wrangler d1 create workflowhub-db
+# Authentication
+JWT_SECRET=generate_random_32_char_string
+AUTH_SALT_ROUNDS=10
+
+# n8n Integration
+DEFAULT_WEBHOOK_URL=https://your-n8n.com/webhook/xxx
+
+# Optional
+SENTRY_DSN=your_sentry_dsn
 ```
 
-Save the database ID from the output.
+### 4. Setup Cloudflare Resources
 
-#### R2 Bucket
+#### Create D1 Database
 ```bash
+# Create database
+wrangler d1 create workflowhub
+
+# Note the database_id from output
+# Update wrangler.toml with the ID
+```
+
+#### Create R2 Bucket
+```bash
+# Create bucket for files
 wrangler r2 bucket create workflowhub-files
 ```
 
-#### KV Namespace
-```bash
-wrangler kv namespace create CACHE
-```
-
-Save the namespace ID from the output.
-
-### 4. Configure wrangler.json
-
-Update `wrangler.json` with your resource IDs:
-
-```json
-{
-  "name": "workflowhub",
-  "compatibility_date": "2025-01-01",
-  "main": "worker/index.ts",
-  "assets": {
-    "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  },
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "workflowhub-db",
-      "database_id": "YOUR_D1_DATABASE_ID"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "FILES",
-      "bucket_name": "workflowhub-files"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "CACHE",
-      "id": "YOUR_KV_NAMESPACE_ID"
-    }
-  ],
-  "vars": {
-    "DEFAULT_WEBHOOK_URL": "https://your-n8n.com/webhook/default"
-  }
-}
-```
-
 ### 5. Run Database Migrations
-
 ```bash
-# Create migrations
-wrangler d1 migrations create workflowhub-db init
+# Apply migrations locally
+wrangler d1 migrations apply workflowhub --local
 
-# Apply migrations
-wrangler d1 migrations apply workflowhub-db
+# Create admin user (interactive)
+npm run seed:admin
 ```
 
-### 6. Set Authentication Token
-
+### 6. Start Development Server
 ```bash
-# Generate a secure token
-openssl rand -hex 32
-
-# Store in KV
-wrangler kv key put --binding=CACHE "auth:token" "YOUR_GENERATED_TOKEN"
-```
-
-## Local Development
-
-```bash
-# Start dev server
+# Start both frontend and worker
 npm run dev
 
-# Access at http://localhost:5173
+# Frontend only
+npm run dev:frontend
+
+# Worker only
+npm run dev:worker
 ```
+
+Development URLs:
+- Frontend: http://localhost:5173
+- Worker API: http://localhost:8787
 
 ## Production Deployment
 
-### Build and Deploy
+### 1. Pre-deployment Checklist
 
+- [ ] All tests passing (`npm test`)
+- [ ] TypeScript compilation successful (`npm run check`)
+- [ ] Environment variables configured
+- [ ] Database migrations ready
+- [ ] Sensitive data removed from code
+- [ ] Error tracking configured (Sentry)
+
+### 2. Build Application
 ```bash
-# Build the application
+# Build frontend and worker
 npm run build
 
-# Deploy to Cloudflare
+# Verify build
+npm run preview
+```
+
+### 3. Configure Production Environment
+
+#### Set Secrets
+```bash
+# Set JWT secret
+wrangler secret put JWT_SECRET
+
+# Set other secrets as needed
+wrangler secret put DEFAULT_WEBHOOK_URL
+```
+
+#### Update wrangler.toml
+```toml
+name = "workflowhub"
+main = "worker/index.ts"
+compatibility_date = "2025-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+[site]
+bucket = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "workflowhub"
+database_id = "your_database_id"
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "workflowhub-files"
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+routes = [
+  { pattern = "workflowhub.yourdomain.com", custom_domain = true }
+]
+```
+
+### 4. Deploy to Cloudflare
+
+#### Initial Deployment
+```bash
+# Deploy to production
 npm run deploy
+
+# Or with wrangler directly
+wrangler deploy --env production
 ```
 
-### Verify Deployment
-
+#### Apply Database Migrations
 ```bash
-# Check logs
-wrangler tail
-
-# Test the deployment
-curl https://workflowhub.YOUR_SUBDOMAIN.workers.dev/api/health
+# Apply to production database
+wrangler d1 migrations apply workflowhub --env production
 ```
 
-## Environment Variables
-
-Set these in the Cloudflare dashboard or via wrangler:
-
+### 5. Verify Deployment
 ```bash
-# n8n webhook base URL
-wrangler secret put N8N_WEBHOOK_BASE
+# Check worker logs
+wrangler tail --env production
 
-# Authentication token
-wrangler secret put AUTH_TOKEN
+# Test endpoints
+curl https://workflowhub.yourdomain.com/api/health
 ```
 
-## Custom Domain Setup
+## CI/CD with GitHub Actions
 
-1. Go to Cloudflare Dashboard > Workers & Pages
-2. Select your WorkflowHub project
-3. Go to Custom Domains tab
-4. Add your domain
-5. Update DNS records as instructed
+### GitHub Actions Workflow
+Create `.github/workflows/deploy.yml`:
 
-## n8n Configuration
+```yaml
+name: Deploy to Cloudflare
 
-### Webhook Setup
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
-1. Create webhooks in n8n for:
-   - Chat message processing
-   - Action button triggers
-   - Form submissions
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
 
-2. Configure webhook URLs in WorkflowHub:
-   - Via UI: Settings page
-   - Via API: PUT `/api/settings/webhook:chat`
-
-### Example n8n Workflow
-
-```json
-{
-  "nodes": [
-    {
-      "name": "Webhook",
-      "type": "n8n-nodes-base.webhook",
-      "parameters": {
-        "path": "workflowhub-chat",
-        "responseMode": "responseNode",
-        "options": {}
-      }
-    },
-    {
-      "name": "Process Message",
-      "type": "n8n-nodes-base.function",
-      "parameters": {
-        "functionCode": "// Process chat message\nreturn items;"
-      }
-    }
-  ]
-}
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build application
+        run: npm run build
+      
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          environment: production
+          
+      - name: Run migrations
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: d1 migrations apply workflowhub --env production
 ```
 
-## Monitoring
+### Required GitHub Secrets
+- `CLOUDFLARE_API_TOKEN` - API token with Workers edit permissions
+- `SENTRY_AUTH_TOKEN` - For source map uploads (optional)
+
+## Environment-Specific Configuration
+
+### Development
+```bash
+# Local D1 database
+wrangler d1 execute workflowhub --local --file schema.sql
+
+# Local R2 (uses local filesystem)
+mkdir -p .wrangler/state/r2/workflowhub-files
+```
+
+### Staging
+```bash
+# Deploy to staging
+wrangler deploy --env staging
+
+# Staging URL
+https://staging.workflowhub.workers.dev
+```
+
+### Production
+```bash
+# Deploy with custom domain
+wrangler deploy --env production
+
+# Production URL
+https://workflowhub.yourdomain.com
+```
+
+## Database Management
+
+### Migrations
+```bash
+# Create new migration
+npm run migration:create -- add_user_preferences
+
+# Apply migrations
+wrangler d1 migrations apply workflowhub --env production
+
+# Rollback (manual - no automatic rollback)
+wrangler d1 execute workflowhub --env production --file migrations/rollback/001.sql
+```
+
+### Backup & Restore
+```bash
+# Export database
+wrangler d1 export workflowhub --env production --output backup.sql
+
+# Import to new database
+wrangler d1 execute new-database --env production --file backup.sql
+```
+
+## Monitoring & Maintenance
 
 ### Logs
 ```bash
 # Real-time logs
-wrangler tail
+wrangler tail --env production
 
-# Filter by status
-wrangler tail --status error
+# Filter logs
+wrangler tail --env production --filter "error"
+
+# Format as JSON
+wrangler tail --env production --format json
 ```
 
 ### Analytics
-- Dashboard: https://dash.cloudflare.com
-- Workers > Analytics
-- Monitor request count, errors, CPU time
+Access via Cloudflare Dashboard:
+- Workers Analytics
+- D1 Metrics
+- R2 Usage
 
-### Health Check
+### Health Checks
 ```bash
 # API health
-curl https://your-domain/api/health
+curl https://workflowhub.yourdomain.com/api/health
 
-# Check specific service
-curl https://your-domain/api/health/database
+# Database health
+curl https://workflowhub.yourdomain.com/api/health/db
+
+# Storage health
+curl https://workflowhub.yourdomain.com/api/health/storage
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Database connection errors**
-   - Verify D1 database ID in wrangler.json
-   - Check migrations were applied
-   
-2. **File upload failures**
-   - Verify R2 bucket name
-   - Check file size limits (100MB)
-   
-3. **Authentication errors**
-   - Verify auth token in KV
-   - Check Authorization header format
+#### Build Failures
+```bash
+# Clear cache and rebuild
+rm -rf node_modules dist .wrangler
+npm install
+npm run build
+```
+
+#### Database Connection Issues
+```bash
+# Check D1 binding
+wrangler d1 list
+
+# Test query
+wrangler d1 execute workflowhub --command "SELECT 1"
+```
+
+#### R2 Upload Issues
+```bash
+# Check bucket exists
+wrangler r2 bucket list
+
+# Verify CORS settings
+wrangler r2 bucket cors get workflowhub-files
+```
+
+#### Worker Timeout
+- Check for long-running operations
+- Implement pagination for large datasets
+- Use background tasks for heavy processing
 
 ### Debug Mode
-
 ```bash
 # Enable debug logging
-wrangler dev --local
+wrangler deploy --env production --var DEBUG=true
+
+# View debug logs
+wrangler tail --env production --filter "debug"
 ```
 
-## Backup and Recovery
+## Rollback Procedures
 
-### Database Backup
+### Quick Rollback
 ```bash
-wrangler d1 backup create workflowhub-db
+# Revert to previous deployment
+wrangler rollback --env production
+
+# Or deploy specific version
+wrangler deploy --env production --compatibility-date 2025-08-31
 ```
 
-### R2 Backup
+### Database Rollback
 ```bash
-# List all files
-wrangler r2 object list workflowhub-files
-
-# Download specific file
-wrangler r2 object get workflowhub-files/path/to/file
+# Manual rollback with prepared scripts
+wrangler d1 execute workflowhub --env production --file migrations/rollback/latest.sql
 ```
 
-## Updates and Maintenance
+## Security Considerations
 
-### Rolling Updates
+### Production Checklist
+- [ ] HTTPS enforced
+- [ ] CORS properly configured
+- [ ] Rate limiting enabled
+- [ ] Input validation active
+- [ ] SQL injection prevention
+- [ ] XSS protection
+- [ ] Secrets rotated regularly
+- [ ] Audit logging enabled
+
+### Secret Rotation
 ```bash
-# Deploy new version
-npm run build && npm run deploy
+# Generate new JWT secret
+openssl rand -base64 32
 
-# Rollback if needed
-wrangler rollback
+# Update secret
+wrangler secret put JWT_SECRET --env production
+
+# Restart worker (automatic)
 ```
 
-### Zero-Downtime Deployment
-Cloudflare Workers automatically handles:
-- Blue-green deployments
-- Gradual rollout
-- Automatic rollback on errors
+## Performance Optimization
 
-## Security Checklist
+### Build Optimization
+```bash
+# Analyze bundle size
+npm run build:analyze
 
-- [ ] Change default auth token
-- [ ] Configure CORS for your domain
-- [ ] Enable Cloudflare Access (optional)
-- [ ] Review webhook URLs
-- [ ] Set rate limiting rules
-- [ ] Enable audit logging
+# Optimize for production
+npm run build:prod
+```
 
-## Support
+### Worker Optimization
+- Enable Smart Placement
+- Use Argo for routing
+- Configure caching headers
+- Implement ETags
 
-For issues or questions:
-- GitHub Issues: [repository]/issues
-- Cloudflare Support: https://support.cloudflare.com
-- n8n Community: https://community.n8n.io
+## Backup Strategy
+
+### Automated Backups
+```bash
+# Daily backup script
+#!/bin/bash
+DATE=$(date +%Y%m%d)
+wrangler d1 export workflowhub --env production --output backups/db-$DATE.sql
+wrangler r2 object list workflowhub-files > backups/files-$DATE.txt
+```
+
+### Disaster Recovery
+1. Keep 30 days of backups
+2. Test restore procedure monthly
+3. Document recovery time objective (RTO)
+4. Maintain runbook for incidents
+
+## Scaling Considerations
+
+### When to Scale
+- Response time > 500ms consistently
+- Database size approaching 10GB
+- Concurrent users > 1000
+- File storage > 1TB
+
+### Scaling Options
+1. **Database**: Add read replicas
+2. **Storage**: Multiple R2 buckets
+3. **Compute**: Durable Objects for state
+4. **CDN**: Cloudflare CDN for assets
+
+## Support & Resources
+
+### Documentation
+- [Cloudflare Workers Docs](https://developers.cloudflare.com/workers/)
+- [D1 Database Docs](https://developers.cloudflare.com/d1/)
+- [R2 Storage Docs](https://developers.cloudflare.com/r2/)
+
+### Community
+- GitHub Issues for bug reports
+- Discord for community support
+- Stack Overflow for Q&A
+
+### Professional Support
+- Cloudflare Enterprise Support
+- Consulting services available

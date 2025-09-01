@@ -1,172 +1,296 @@
-# WorkflowHub
+# WorkflowHub 2.0
 
-A comprehensive business workflow management dashboard with n8n integration, built on Cloudflare Workers with React.
-
-🚀 **Live Demo**: [https://workflowhub.webfonts.workers.dev](https://workflowhub.webfonts.workers.dev)  
-📦 **Repository**: [https://github.com/jezweb/workflowhub](https://github.com/jezweb/workflowhub)
+A modern business workflow management dashboard built on Cloudflare's edge platform with n8n integration. Designed for simplicity, functionality, and ease of use for small teams.
 
 ## Features
 
-- 🎯 **Action Buttons Dashboard** - Quick-trigger workflows with customizable buttons organized in collections
-- 💬 **Multi-threaded Chat System** - Organized conversations with folder-based webhook routing
-- 📝 **Forms Builder** - Create custom forms to collect data and send to n8n webhooks
-- 📁 **File Management** - R2-powered file storage with upload/download capabilities
-- 🗄️ **D1 Database Viewer** - Browse and query your database directly
-- ⚙️ **Settings Manager** - Configure buttons, folders, collections, and system settings via KV storage
-- 📂 **Button Collections** - Organize dashboard buttons into thematic groups with descriptions
+### 🔐 Authentication & Security
+- Simple username/password authentication
+- JWT-based sessions
+- Role-based access control (User/Admin)
+- Protected routes for secure areas
+
+### 📝 Dynamic Forms
+- Visual form builder with drag-and-drop
+- Flexible field layouts (full, 1/2, 1/3, 1/4 width)
+- Multiple field types (text, select, file, date, etc.)
+- Public and private form options
+- Webhook integration for form submissions
+
+### 📁 File Management
+- R2-powered file storage
+- Virtual folder structure
+- Drag-and-drop uploads
+- Grid and list view options
+- File preview and metadata
+
+### 💬 Chat System
+- Nested conversation structure
+- Real-time streaming responses via SSE
+- File attachments support
+- n8n webhook integration for AI/automation
+- Searchable message history
+
+### 🎯 Action Buttons
+- Full HTTP method support (GET, POST, PUT, DELETE, PATCH)
+- Custom headers configuration
+- JSON payload templates with variable substitution
+- Dynamic data injection ({{user.id}}, {{timestamp}}, etc.)
+- Three response modes (modal, toast, page)
+- Direct webhook execution with response handling
+- Test mode with request preview
+- URL copy for external integration
+
+### 📊 Database Viewer
+- Interactive data grid
+- Inline editing capabilities
+- Sort, filter, and pagination
+- CSV export functionality
+- Schema exploration
+
+### ⚙️ Settings Management
+- Categorized settings interface
+- Import/export configurations
+- Environment-specific settings
+- Webhook URL management
+
+### 📈 Dashboard
+- Customizable widget layout
+- Drag-and-drop arrangement
+- Multiple widget types (buttons, forms, stats)
+- Responsive grid system
+- Per-user customization
 
 ## Tech Stack
 
-- **Frontend**: React 19, TypeScript, Vite 6, Tailwind CSS v3
-- **Backend**: Cloudflare Workers with Hono
-- **Storage**: Cloudflare D1 (SQLite), R2 (Object Storage), KV (Cache)
-- **Deployment**: Cloudflare Workers with Static Assets
+- **Frontend**: React 19, TypeScript, shadcn/ui, Tailwind CSS
+- **Backend**: Cloudflare Workers, Hono, D1 Database, R2 Storage
+- **Build**: Vite 6, Wrangler 4
+- **Integration**: n8n webhooks, Server-Sent Events
 
 ## Quick Start
 
 ### Prerequisites
-
-- Node.js 18+
-- npm or pnpm
+- Node.js 20+ and npm 10+
 - Cloudflare account
-- Wrangler CLI installed (`npm install -g wrangler`)
+- Wrangler CLI (`npm install -g wrangler`)
 
-### Installation & Deployment
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/jezweb/workflowhub.git
-   cd workflowhub
-   ```
-
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
-
-3. **Set your Cloudflare account ID**
-   ```bash
-   export CLOUDFLARE_ACCOUNT_ID="your-account-id"
-   ```
-
-4. **Create Cloudflare resources**
-   ```bash
-   # Create D1 database
-   npx wrangler d1 create workflowhub-db
-   
-   # Create R2 bucket
-   npx wrangler r2 bucket create workflowhub-files
-   
-   # Create KV namespace
-   npx wrangler kv namespace create CACHE
-   ```
-
-5. **Update wrangler.jsonc with the IDs from step 4**
-   - Replace `YOUR_D1_DATABASE_ID` with the database ID
-   - Replace `YOUR_KV_NAMESPACE_ID` with the KV namespace ID
-
-6. **Apply database migrations**
-   ```bash
-   npx wrangler d1 migrations apply workflowhub-db --local
-   npx wrangler d1 migrations apply workflowhub-db --remote
-   ```
-
-7. **Build and deploy**
-   ```bash
-   npm run build
-   npm run deploy
-   ```
-
-Your application will be deployed to `https://[your-subdomain].workers.dev`
-
-### Configure n8n Webhooks
-
-1. Update the `DEFAULT_WEBHOOK_URL` in `wrangler.jsonc` with your n8n webhook URL
-2. Configure individual folder webhooks in the Settings page of the deployed app
-3. Action buttons can trigger different n8n workflows via their webhook URLs
-
-## Development
+### Installation
 
 ```bash
-npm run dev        # Start local development server
-npm run build      # Build for production
-npm run check      # TypeScript and build validation
-npm run deploy     # Deploy to Cloudflare
+# Clone the repository
+git clone https://github.com/yourusername/workflowhub.git
+cd workflowhub
+
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env.local
+# Edit .env.local with your values
+
+# Setup Cloudflare resources
+wrangler d1 create workflowhub
+wrangler r2 bucket create workflowhub-files
+
+# Run migrations
+wrangler d1 migrations apply workflowhub --local
+
+# Start development server
+npm run dev
 ```
+
+Visit http://localhost:5173 to see the application
 
 ## Project Structure
 
 ```
 workflowhub/
-├── src/
-│   ├── worker/          # Cloudflare Worker API endpoints
-│   │   └── index.ts     # Main worker with Hono routes
-│   └── react-app/       # React frontend
-│       ├── App.tsx      # Main app component
-│       └── pages/       # Page components
-├── migrations/          # D1 database migrations
-├── public/             # Static assets
-├── wrangler.jsonc      # Cloudflare configuration
-└── vite.config.ts      # Vite configuration
+├── src/                 # React application
+│   ├── components/      # UI components
+│   ├── pages/          # Page components
+│   ├── hooks/          # Custom hooks
+│   ├── lib/            # Utilities
+│   └── stores/         # State management
+├── worker/             # Cloudflare Worker
+│   ├── routes/         # API endpoints
+│   ├── middleware/     # Request middleware
+│   └── services/       # Business logic
+├── migrations/         # Database migrations
+└── public/            # Static assets
 ```
 
-## API Endpoints
+## Development
 
-### Action Buttons & Collections
-- `GET /api/buttons` - List action buttons with collection info
-- `POST /api/buttons` - Create new button
-- `PUT /api/buttons/:id` - Update button
-- `DELETE /api/buttons/:id` - Delete button
-- `POST /api/buttons/:id/trigger` - Trigger button webhook
-- `GET /api/collections` - List button collections
-- `POST /api/collections` - Create collection
-- `PUT /api/collections/:id` - Update collection
-- `DELETE /api/collections/:id` - Delete collection
-- `GET /api/collections/:id/buttons` - Get buttons in collection
+```bash
+# Start development server
+npm run dev
 
-### Chat System
-- `GET /api/chat/folders` - List chat folders
-- `POST /api/chat/folders` - Create chat folder
-- `GET /api/chat/folders/:id/threads` - List threads in folder
-- `POST /api/chat/threads/:id/messages` - Send chat message
+# Run type checking
+npm run check
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+
+# Deploy to Cloudflare
+npm run deploy
+```
+
+## API Documentation
+
+The API follows RESTful conventions. All endpoints are prefixed with `/api`.
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/logout` - User logout
+- `GET /api/auth/session` - Check session
 
 ### Forms
 - `GET /api/forms` - List forms
 - `POST /api/forms` - Create form
-- `GET /api/forms/:id` - Get form with fields
-- `PUT /api/forms/:id` - Update form
-- `DELETE /api/forms/:id` - Delete form
-- `GET /api/forms/:id/fields` - Get form fields
-- `POST /api/forms/:id/fields` - Add field to form
-- `PUT /api/fields/:id` - Update field
-- `DELETE /api/fields/:id` - Delete field
-- `GET /api/forms/:id/submissions` - Get form submissions
-- `GET /api/public/form/:slug` - Get public form
-- `POST /api/public/form/:slug/submit` - Submit form data
+- `GET /api/forms/:id` - Get form
+- `POST /api/forms/:id/submit` - Submit form
 
-### File Management
-- `GET /api/files` - List files in R2
-- `POST /api/files/upload` - Upload file to R2
+### Files
+- `GET /api/files` - List files
+- `POST /api/files/upload` - Upload files
 - `DELETE /api/files/:key` - Delete file
 
-### Database & Settings
-- `GET /api/data/tables` - List D1 tables
-- `POST /api/data/query` - Execute SQL query
-- `GET /api/settings` - Get KV settings
-- `PUT /api/settings/:key` - Update setting
+### Chat
+- `GET /api/conversations` - List conversations
+- `POST /api/conversations/:id/messages` - Send message (SSE)
 
-## Architecture
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete API documentation.
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for system design and technical details.
+## Configuration
+
+### Environment Variables
+
+```env
+# Required
+CLOUDFLARE_ACCOUNT_ID=your_account_id
+JWT_SECRET=your_secret_key
+DEFAULT_WEBHOOK_URL=https://n8n.example.com/webhook/xxx
+
+# Optional
+SENTRY_DSN=your_sentry_dsn
+DEBUG=false
+```
+
+### n8n Integration
+
+1. Create webhooks in n8n for each integration point
+2. Configure webhook URLs in Settings page
+3. Test connections using the Test button
+
+Example n8n webhook node configuration:
+```json
+{
+  "webhookDescription": "WorkflowHub Chat",
+  "path": "workflowhub-chat",
+  "responseMode": "responseNode",
+  "responseData": "allEntries"
+}
+```
+
+## Deployment
+
+### Production Deployment
+
+```bash
+# Build application
+npm run build
+
+# Deploy to Cloudflare
+npm run deploy
+
+# Apply migrations
+wrangler d1 migrations apply workflowhub --env production
+```
+
+### Custom Domain
+
+1. Add custom domain in Cloudflare Dashboard
+2. Update DNS records
+3. Configure in wrangler.toml
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and type checking
+5. Submit a pull request
+
+## Architecture
+
+WorkflowHub uses a modern edge-first architecture:
+
+- **Edge Computing**: Zero cold starts with Cloudflare Workers
+- **SQLite at the Edge**: D1 for fast, distributed database
+- **Object Storage**: R2 for file storage with S3 compatibility
+- **Real-time Updates**: SSE for streaming responses
+- **Type Safety**: Full TypeScript coverage
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation.
+
+## Security
+
+- Password hashing with bcrypt
+- JWT tokens with expiration
+- CORS protection
+- Input validation with Zod
+- SQL injection prevention
+- XSS protection via React
+
+## Performance
+
+- Edge computing for low latency
+- Optimistic UI updates
+- Virtual scrolling for large lists
+- Code splitting and lazy loading
+- Efficient caching strategies
+
+## Troubleshooting
+
+### Common Issues
+
+**Build fails**: Check Node.js version (20+) and clear node_modules
+
+**Database errors**: Verify D1 bindings in wrangler.toml
+
+**Upload fails**: Check R2 bucket permissions and CORS settings
+
+**Auth issues**: Verify JWT_SECRET is set correctly
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md#troubleshooting) for more solutions.
 
 ## License
 
-MIT
+MIT License - see [LICENSE](./LICENSE) for details.
 
 ## Support
 
-For issues, questions, or suggestions, please [open an issue](https://github.com/jezweb/workflowhub/issues) on GitHub.
+- 📧 Email: support@workflowhub.com
+- 💬 Discord: [Join our community](https://discord.gg/workflowhub)
+- 🐛 Issues: [GitHub Issues](https://github.com/yourusername/workflowhub/issues)
+
+## Acknowledgments
+
+- [Cloudflare](https://cloudflare.com) for the edge platform
+- [n8n](https://n8n.io) for workflow automation
+- [shadcn/ui](https://ui.shadcn.com) for beautiful components
+- The open-source community
+
+---
+
+Built with ❤️ by the WorkflowHub team
