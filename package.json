@@ -1,6 +1,6 @@
 {
   "name": "workflowhub",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Business workflow management dashboard with n8n integration",
   "private": true,
   "dependencies": {

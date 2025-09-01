@@ -1,151 +1,67 @@
-# WorkflowHub Development Scratchpad
-
-## Project Overview
-Building a business workflow management dashboard with:
-- Cloudflare Workers + Static Assets
-- Vite + React + TypeScript
-- D1 Database, R2 Storage, KV Cache
-- n8n webhook integrations
+# Forms Feature Implementation Scratchpad
 
 ## Current Status
-- [x] Project initialization
-- [x] Infrastructure setup (bindings configured)
-- [x] Worker API endpoints implemented
-- [x] React frontend components
-- [x] Testing & deployment
-- [ ] Collections feature for dashboard organization
+Starting implementation of Forms functionality for WorkflowHub
 
-## Key Decisions
-1. Using Cloudflare Vite plugin for development
-2. React Router v6 for SPA routing
-3. Tailwind CSS v4 for styling
-4. Simple fetch API for n8n webhooks
-5. SSE for streaming chat responses
+## Implementation Plan
 
-## Development Steps
+### Phase 1: Database Schema ⏳
+- Create migration file 0003_forms.sql
+- Define forms, form_fields, form_submissions tables
+- Add indexes for performance
 
-### Step 1: Initialize Project
-- Use `npm create cloudflare@latest` with React template
-- Verify Vite 6 and Cloudflare plugin compatibility
-- Set up TypeScript configuration
+### Phase 2: API Endpoints
+- Forms CRUD operations
+- Field management
+- Public form submission
+- File upload handling
 
-### Step 2: Project Structure
+### Phase 3: UI Components
+- Forms list page
+- Form builder (simplified)
+- Form renderer
+- Public form view
+
+### Phase 4: Integration & Testing
+- Connect to webhooks
+- Test file uploads
+- Verify form submissions
+
+## Design Decisions
+
+### Simplification Choices
+1. **No drag-and-drop initially** - Use simple list with position ordering
+2. **Basic field types only** - text, email, number, textarea, select, checkbox, file
+3. **Simple validation** - Required fields and basic pattern matching
+4. **No multi-step forms** - Single page forms only for MVP
+5. **No conditional logic** - All fields always visible
+
+### Technical Choices
+1. **Form data as JSON** - Store form submissions as JSON in database
+2. **File uploads to R2** - Reuse existing R2 bucket for form files
+3. **Webhook retry** - Simple retry logic with exponential backoff
+4. **Public access via slug** - Simple URL-friendly identifiers
+
+## API Design
+
+### Forms Endpoints
 ```
-workflowhub/
-├── src/                    # React app
-├── worker/                 # API endpoints
-├── migrations/             # D1 schemas
-├── public/                 # Static assets
-└── tests/                  # Test files
-```
+GET    /api/forms              - List forms
+POST   /api/forms              - Create form
+GET    /api/forms/:id          - Get form with fields
+PUT    /api/forms/:id          - Update form
+DELETE /api/forms/:id          - Delete form
 
-### Step 3: Core Components
-1. Chat system with folders/threads
-2. File manager for R2
-3. Dashboard with action buttons
-4. Data viewer for D1 tables
-5. Settings manager with KV
+GET    /api/forms/:id/fields   - Get fields
+POST   /api/forms/:id/fields   - Add field
+PUT    /api/fields/:id         - Update field
+DELETE /api/fields/:id         - Delete field
 
-### Step 4: API Endpoints
-- `/api/chat/*` - Chat operations
-- `/api/files/*` - R2 file operations
-- `/api/data/*` - D1 queries
-- `/api/webhooks/*` - n8n proxy
-
-### Step 5: Testing Strategy
-- Unit tests for utilities
-- Integration tests for API
-- Type checking with TypeScript
-- Linting with ESLint
-
-## Dependencies to Install
-```bash
-# Core
-react react-dom react-router-dom
-
-# UI
-tailwindcss@next lucide-react clsx
-
-# Development
-typescript @types/react @types/node
-vitest @vitest/ui
+GET    /api/forms/:id/submissions - Get submissions
+GET    /api/public/form/:slug     - Get public form
+POST   /api/public/form/:slug/submit - Submit form
 ```
 
-## Cloudflare Resources
-- D1 Database: workflowhub-db
-- R2 Bucket: workflowhub-files
-- KV Namespace: workflowhub-cache
-
-## n8n Integration Points
-1. Chat webhook: Process messages and return responses
-2. Action webhooks: Trigger workflows from buttons
-3. Form webhooks: Submit form data for processing
-
-## Notes & Issues
-- Check Tailwind v4 documentation for new config format
-- Verify Vite 6 compatibility with Cloudflare plugin
-- Use wrangler.jsonc for better IDE support
-- Keep API responses under 1MB for Workers
-
-## Git Commits
-- Initial project setup
-- Add documentation files
-- Configure Cloudflare bindings
-- Implement chat API
-- Add React components
-- Deploy to production
-
-## Testing Checklist
-- [x] TypeScript compiles without errors
-- [x] ESLint passes
-- [ ] Unit tests pass
-- [x] API endpoints respond correctly
-- [x] Frontend loads without errors
-- [ ] n8n webhooks integrate properly
-
-## Collections Feature Implementation
-
-### Overview
-Adding ability to organize dashboard buttons into collections with:
-- Heading and description for each collection
-- Visual grouping and hierarchy
-- Collapsible/expandable sections
-- Settings management for collections
-
-### Database Schema Changes
-1. New table: `button_collections`
-   - id (TEXT PRIMARY KEY)
-   - name (TEXT NOT NULL)
-   - description (TEXT)
-   - icon (TEXT)
-   - color (TEXT)
-   - position (INTEGER)
-   - collapsed (BOOLEAN)
-   - created_at, updated_at
-
-2. Update `action_buttons`:
-   - Add collection_id (TEXT, FOREIGN KEY)
-   - Nullable to support ungrouped buttons
-
-### Implementation Steps
-1. Create database migration (0002_button_collections.sql)
-2. Update Worker API:
-   - CRUD endpoints for collections
-   - Update button endpoints to include collection data
-3. Frontend updates:
-   - DashboardPage: Display collections with buttons
-   - SettingsPage: Add Collections management tab
-4. Testing and refinement
-5. Documentation updates
-
-### API Endpoints
-- GET /api/collections - List all collections
-- POST /api/collections - Create collection
-- PUT /api/collections/:id - Update collection
-- DELETE /api/collections/:id - Delete collection
-- GET /api/collections/:id/buttons - Get buttons in collection
-
-### UI Components
-- CollectionCard: Container for grouped buttons
-- CollectionHeader: Title, description, expand/collapse
-- QuickActions: Section for ungrouped buttons
+## Progress Log
+- Started: Creating database migration
+- Next: API endpoints

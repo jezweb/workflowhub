@@ -479,7 +479,7 @@ app.get("/api/tables/:name", async (c) => {
     const offset = (page - 1) * limit;
     
     // Validate table name to prevent SQL injection
-    const validTables = ["chat_folders", "chat_threads", "chat_messages", "action_buttons", "files_metadata"];
+    const validTables = ["chat_folders", "chat_threads", "chat_messages", "action_buttons", "files_metadata", "button_collections", "forms", "form_fields", "form_submissions"];
     if (!validTables.includes(tableName)) {
       return c.json({ error: "Invalid table name" }, 400);
     }
@@ -503,6 +503,313 @@ app.get("/api/tables/:name", async (c) => {
     });
   } catch (error) {
     return c.json({ error: "Failed to query table" }, 500);
+  }
+});
+
+// Forms API endpoints
+app.get("/api/forms", async (c) => {
+  try {
+    const result = await c.env.DB.prepare(
+      "SELECT * FROM forms ORDER BY position, name"
+    ).all();
+    return c.json(result.results);
+  } catch (error) {
+    return c.json({ error: "Failed to fetch forms" }, 500);
+  }
+});
+
+app.post("/api/forms", async (c) => {
+  try {
+    const body = await c.req.json();
+    const { name, description, webhook_url, webhook_headers, webhook_method, slug, redirect_url, success_message } = body;
+    
+    // Generate slug if not provided
+    const finalSlug = slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    
+    const result = await c.env.DB.prepare(
+      `INSERT INTO forms (name, description, slug, webhook_url, webhook_headers, webhook_method, redirect_url, success_message) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+    ).bind(
+      name,
+      description || null,
+      finalSlug,
+      webhook_url,
+      JSON.stringify(webhook_headers || {}),
+      webhook_method || 'POST',
+      redirect_url || null,
+      success_message || 'Thank you for your submission!'
+    ).first();
+    
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: "Failed to create form" }, 500);
+  }
+});
+
+app.get("/api/forms/:id", async (c) => {
+  try {
+    const formId = c.req.param("id");
+    
+    const form = await c.env.DB.prepare(
+      "SELECT * FROM forms WHERE id = ?"
+    ).bind(formId).first();
+    
+    if (!form) {
+      return c.json({ error: "Form not found" }, 404);
+    }
+    
+    const fields = await c.env.DB.prepare(
+      "SELECT * FROM form_fields WHERE form_id = ? ORDER BY position, id"
+    ).bind(formId).all();
+    
+    return c.json({ ...form, fields: fields.results });
+  } catch (error) {
+    return c.json({ error: "Failed to fetch form" }, 500);
+  }
+});
+
+app.put("/api/forms/:id", async (c) => {
+  try {
+    const formId = c.req.param("id");
+    const body = await c.req.json();
+    const { name, description, webhook_url, webhook_headers, webhook_method, slug, redirect_url, success_message, is_published } = body;
+    
+    const result = await c.env.DB.prepare(
+      `UPDATE forms SET 
+        name = ?, description = ?, slug = ?, webhook_url = ?, webhook_headers = ?, 
+        webhook_method = ?, redirect_url = ?, success_message = ?, is_published = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE id = ? RETURNING *`
+    ).bind(
+      name,
+      description || null,
+      slug,
+      webhook_url,
+      JSON.stringify(webhook_headers || {}),
+      webhook_method || 'POST',
+      redirect_url || null,
+      success_message || 'Thank you for your submission!',
+      is_published ? 1 : 0,
+      formId
+    ).first();
+    
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: "Failed to update form" }, 500);
+  }
+});
+
+app.delete("/api/forms/:id", async (c) => {
+  try {
+    const formId = c.req.param("id");
+    await c.env.DB.prepare("DELETE FROM forms WHERE id = ?").bind(formId).run();
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: "Failed to delete form" }, 500);
+  }
+});
+
+// Form fields endpoints
+app.get("/api/forms/:formId/fields", async (c) => {
+  try {
+    const formId = c.req.param("formId");
+    const result = await c.env.DB.prepare(
+      "SELECT * FROM form_fields WHERE form_id = ? ORDER BY position, id"
+    ).bind(formId).all();
+    return c.json(result.results);
+  } catch (error) {
+    return c.json({ error: "Failed to fetch fields" }, 500);
+  }
+});
+
+app.post("/api/forms/:formId/fields", async (c) => {
+  try {
+    const formId = c.req.param("formId");
+    const body = await c.req.json();
+    const { name, label, type, placeholder, help_text, required, options, validation_pattern, validation_message, default_value, position, width } = body;
+    
+    const result = await c.env.DB.prepare(
+      `INSERT INTO form_fields (form_id, name, label, type, placeholder, help_text, required, options, validation_pattern, validation_message, default_value, position, width) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING *`
+    ).bind(
+      formId,
+      name,
+      label,
+      type,
+      placeholder || null,
+      help_text || null,
+      required ? 1 : 0,
+      JSON.stringify(options || null),
+      validation_pattern || null,
+      validation_message || null,
+      default_value || null,
+      position || 0,
+      width || 'full'
+    ).first();
+    
+    return c.json(result, 201);
+  } catch (error) {
+    return c.json({ error: "Failed to create field" }, 500);
+  }
+});
+
+app.put("/api/fields/:id", async (c) => {
+  try {
+    const fieldId = c.req.param("id");
+    const body = await c.req.json();
+    const { name, label, type, placeholder, help_text, required, options, validation_pattern, validation_message, default_value, position, width } = body;
+    
+    const result = await c.env.DB.prepare(
+      `UPDATE form_fields SET 
+        name = ?, label = ?, type = ?, placeholder = ?, help_text = ?, required = ?, 
+        options = ?, validation_pattern = ?, validation_message = ?, default_value = ?, position = ?, width = ?
+       WHERE id = ? RETURNING *`
+    ).bind(
+      name,
+      label,
+      type,
+      placeholder || null,
+      help_text || null,
+      required ? 1 : 0,
+      JSON.stringify(options || null),
+      validation_pattern || null,
+      validation_message || null,
+      default_value || null,
+      position || 0,
+      width || 'full',
+      fieldId
+    ).first();
+    
+    return c.json(result);
+  } catch (error) {
+    return c.json({ error: "Failed to update field" }, 500);
+  }
+});
+
+app.delete("/api/fields/:id", async (c) => {
+  try {
+    const fieldId = c.req.param("id");
+    await c.env.DB.prepare("DELETE FROM form_fields WHERE id = ?").bind(fieldId).run();
+    return c.json({ success: true });
+  } catch (error) {
+    return c.json({ error: "Failed to delete field" }, 500);
+  }
+});
+
+// Form submissions
+app.get("/api/forms/:formId/submissions", async (c) => {
+  try {
+    const formId = c.req.param("formId");
+    const result = await c.env.DB.prepare(
+      "SELECT * FROM form_submissions WHERE form_id = ? ORDER BY created_at DESC"
+    ).bind(formId).all();
+    return c.json(result.results);
+  } catch (error) {
+    return c.json({ error: "Failed to fetch submissions" }, 500);
+  }
+});
+
+// Public form endpoints
+app.get("/api/public/form/:slug", async (c) => {
+  try {
+    const slug = c.req.param("slug");
+    
+    const form = await c.env.DB.prepare(
+      "SELECT * FROM forms WHERE slug = ? AND is_published = 1"
+    ).bind(slug).first();
+    
+    if (!form) {
+      return c.json({ error: "Form not found" }, 404);
+    }
+    
+    const fields = await c.env.DB.prepare(
+      "SELECT * FROM form_fields WHERE form_id = ? ORDER BY position, id"
+    ).bind(form.id as string).all();
+    
+    return c.json({ ...form, fields: fields.results });
+  } catch (error) {
+    return c.json({ error: "Failed to fetch form" }, 500);
+  }
+});
+
+app.post("/api/public/form/:slug/submit", async (c) => {
+  try {
+    const slug = c.req.param("slug");
+    
+    const form = await c.env.DB.prepare(
+      "SELECT * FROM forms WHERE slug = ? AND is_published = 1"
+    ).bind(slug).first();
+    
+    if (!form) {
+      return c.json({ error: "Form not found" }, 404);
+    }
+    
+    const contentType = c.req.header("Content-Type");
+    let formData: any = {};
+    let files: any[] = [];
+    
+    if (contentType?.includes("multipart/form-data")) {
+      // Handle file uploads
+      const body = await c.req.parseBody();
+      
+      for (const [key, value] of Object.entries(body)) {
+        if (value instanceof File) {
+          // Upload file to R2
+          const fileKey = `forms/${form.id}/${Date.now()}-${value.name}`;
+          await c.env.FILES.put(fileKey, value.stream(), {
+            httpMetadata: {
+              contentType: value.type,
+            },
+          });
+          files.push({ key: fileKey, name: value.name, size: value.size, type: value.type });
+          formData[key] = fileKey;
+        } else {
+          formData[key] = value;
+        }
+      }
+    } else {
+      formData = await c.req.json();
+    }
+    
+    // Save submission
+    const submission = await c.env.DB.prepare(
+      `INSERT INTO form_submissions (form_id, data, files, ip_address, user_agent) 
+       VALUES (?, ?, ?, ?, ?) RETURNING *`
+    ).bind(
+      form.id as string,
+      JSON.stringify(formData),
+      JSON.stringify(files),
+      c.req.header("CF-Connecting-IP") || null,
+      c.req.header("User-Agent") || null
+    ).first();
+    
+    // Send to webhook
+    try {
+      const webhookResponse = await fetch(form.webhook_url as string, {
+        method: (form.webhook_method as string) || "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...JSON.parse((form.webhook_headers as string) || "{}"),
+        },
+        body: JSON.stringify({ formData, files, submissionId: submission?.id }),
+      });
+      
+      const webhookData = await webhookResponse.json() as any;
+      
+      // Update submission with webhook response
+      await c.env.DB.prepare(
+        `UPDATE form_submissions SET webhook_response = ?, webhook_status = ?, webhook_sent_at = CURRENT_TIMESTAMP WHERE id = ?`
+      ).bind(JSON.stringify(webhookData), webhookResponse.status, submission?.id).run();
+    } catch (webhookError) {
+      console.error("Webhook error:", webhookError);
+    }
+    
+    return c.json({ 
+      success: true, 
+      message: form.success_message || "Thank you for your submission!",
+      redirectUrl: form.redirect_url || null
+    });
+  } catch (error) {
+    return c.json({ error: "Failed to submit form" }, 500);
   }
 });
 

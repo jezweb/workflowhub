@@ -1,11 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Link, Navigate } from 'react-router-dom';
 import { useState } from 'react';
-import { MessageSquare, FolderOpen, Grid3x3, Database, Settings, Menu, X } from 'lucide-react';
+import { MessageSquare, FolderOpen, Grid3x3, Database, Settings, Menu, X, FileText } from 'lucide-react';
 import ChatPage from './pages/ChatPage';
 import FilesPage from './pages/FilesPage';
 import DashboardPage from './pages/DashboardPage';
 import DataPage from './pages/DataPage';
 import SettingsPage from './pages/SettingsPage';
+import FormsPage from './pages/FormsPage';
+import FormBuilderPage from './pages/FormBuilderPage';
+import PublicFormPage from './pages/PublicFormPage';
 
 function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -13,6 +16,7 @@ function App() {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Grid3x3 },
     { name: 'Chat', href: '/chat', icon: MessageSquare },
+    { name: 'Forms', href: '/forms', icon: FileText },
     { name: 'Files', href: '/files', icon: FolderOpen },
     { name: 'Data', href: '/data', icon: Database },
     { name: 'Settings', href: '/settings', icon: Settings },
@@ -62,6 +66,9 @@ function App() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/chat" element={<ChatPage />} />
+              <Route path="/forms" element={<FormsPage />} />
+              <Route path="/forms/:id/edit" element={<FormBuilderPage />} />
+              <Route path="/form/:slug" element={<PublicFormPage />} />
               <Route path="/files" element={<FilesPage />} />
               <Route path="/data" element={<DataPage />} />
               <Route path="/settings" element={<SettingsPage />} />

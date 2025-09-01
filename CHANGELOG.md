@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-09-01
+
+### Added
+- **Forms Builder** - Complete forms functionality for data collection
+  - Visual form builder with field management
+  - Support for multiple field types (text, email, number, textarea, select, radio, checkbox, file, date, time, tel, url)
+  - Field validation with custom patterns and messages
+  - Required fields and help text support
+  - Public form access via custom slugs
+  - File upload support with R2 integration
+  - Form submissions stored in D1 database
+  - Webhook integration for form data
+  - Success messages and optional redirect URLs
+  - Database migration (0003_forms.sql) for forms support
+- New API endpoints for forms management
+  - GET /api/forms - List all forms
+  - POST /api/forms - Create new form
+  - GET /api/forms/:id - Get form with fields
+  - PUT /api/forms/:id - Update form
+  - DELETE /api/forms/:id - Delete form
+  - GET /api/forms/:id/fields - Get form fields
+  - POST /api/forms/:id/fields - Add field to form
+  - PUT /api/fields/:id - Update field
+  - DELETE /api/fields/:id - Delete field
+  - GET /api/forms/:id/submissions - Get form submissions
+  - GET /api/public/form/:slug - Get public form
+  - POST /api/public/form/:slug/submit - Submit form data
+- Forms page with management interface
+- Form builder page for field configuration
+- Public form page for data collection
+- Forms navigation in main menu
+
+### Changed
+- Updated data viewer to include forms tables
+- Enhanced file upload handling for form submissions
+
 ## [0.2.0] - 2025-09-01
 
 ### Added
@@ -49,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Database migrations system
 - Comprehensive API endpoints for all features
 
-[Unreleased]: https://github.com/jezweb/workflowhub/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/jezweb/workflowhub/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/jezweb/workflowhub/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/jezweb/workflowhub/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/jezweb/workflowhub/releases/tag/v0.1.0

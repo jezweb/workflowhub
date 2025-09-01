@@ -9,6 +9,7 @@ A comprehensive business workflow management dashboard with n8n integration, bui
 
 - 🎯 **Action Buttons Dashboard** - Quick-trigger workflows with customizable buttons organized in collections
 - 💬 **Multi-threaded Chat System** - Organized conversations with folder-based webhook routing
+- 📝 **Forms Builder** - Create custom forms to collect data and send to n8n webhooks
 - 📁 **File Management** - R2-powered file storage with upload/download capabilities
 - 🗄️ **D1 Database Viewer** - Browse and query your database directly
 - ⚙️ **Settings Manager** - Configure buttons, folders, collections, and system settings via KV storage
@@ -128,6 +129,20 @@ workflowhub/
 - `POST /api/chat/folders` - Create chat folder
 - `GET /api/chat/folders/:id/threads` - List threads in folder
 - `POST /api/chat/threads/:id/messages` - Send chat message
+
+### Forms
+- `GET /api/forms` - List forms
+- `POST /api/forms` - Create form
+- `GET /api/forms/:id` - Get form with fields
+- `PUT /api/forms/:id` - Update form
+- `DELETE /api/forms/:id` - Delete form
+- `GET /api/forms/:id/fields` - Get form fields
+- `POST /api/forms/:id/fields` - Add field to form
+- `PUT /api/fields/:id` - Update field
+- `DELETE /api/fields/:id` - Delete field
+- `GET /api/forms/:id/submissions` - Get form submissions
+- `GET /api/public/form/:slug` - Get public form
+- `POST /api/public/form/:slug/submit` - Submit form data
 
 ### File Management
 - `GET /api/files` - List files in R2
