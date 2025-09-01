@@ -65,3 +65,42 @@ POST   /api/public/form/:slug/submit - Submit form
 ## Progress Log
 - Started: Creating database migration
 - Next: API endpoints
+
+---
+
+# Field Labels Bug and Drag-and-Drop Implementation
+
+## Current Issue (2025-09-01)
+- Fields showing "Name0", "Email0", "Phone0" even after removing `{field.position}` from code
+- Drag handle icon is decorative only - no actual reordering functionality
+
+## Investigation Notes
+- Database has correct values: "Name", "Email", "Phone"
+- API returns correct values
+- Deployed JS bundle doesn't contain `field.position` anymore
+- Issue persists in browser - possible caching or another source
+
+## Implementation Plan
+
+### Phase 1: Debug and Fix the "0" Issue
+- [ ] Check for any other places where position might be concatenated
+- [ ] Add temporary debug logging to identify source
+- [ ] Force cache refresh with new bundle
+
+### Phase 2: Implement Drag-and-Drop
+- [ ] Add draggable attributes to field rows
+- [ ] Implement drag event handlers
+- [ ] Update positions on drop
+- [ ] Create API endpoint for batch position updates
+- [ ] Add visual feedback during drag
+
+### Phase 3: Testing and Documentation
+- [ ] Test drag-and-drop with various field configurations
+- [ ] Update documentation
+- [ ] Commit changes
+
+## Technical Decisions
+- Use HTML5 native drag-and-drop API (no external libraries)
+- Keep positions 0-indexed in database for simplicity
+- Batch update positions to minimize API calls
+- Optimistic UI updates with rollback on error
