@@ -99,11 +99,11 @@ app.post("/api/chat/threads/:threadId/messages", async (c) => {
     }
     
     // Forward to n8n webhook
-    const webhookResponse = await fetch(thread.webhook_url, {
+    const webhookResponse = await fetch(thread.webhook_url as string, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        ...JSON.parse(thread.webhook_headers || "{}"),
+        ...JSON.parse((thread.webhook_headers as string) || "{}"),
       },
       body: JSON.stringify({
         threadId,
@@ -113,13 +113,13 @@ app.post("/api/chat/threads/:threadId/messages", async (c) => {
       }),
     });
     
-    const responseData = await webhookResponse.json();
+    const responseData = await webhookResponse.json() as any;
     
     // Save assistant response
     const assistantMessage = await c.env.DB.prepare(
       `INSERT INTO chat_messages (thread_id, role, content) 
        VALUES (?, 'assistant', ?) RETURNING *`
-    ).bind(threadId, responseData.response || "I couldn't process that request.")
+    ).bind(threadId, responseData?.response || "I couldn't process that request.")
      .first();
     
     // Update thread last message
@@ -127,7 +127,7 @@ app.post("/api/chat/threads/:threadId/messages", async (c) => {
       `UPDATE chat_threads 
        SET last_message = ?, last_activity = CURRENT_TIMESTAMP 
        WHERE id = ?`
-    ).bind(responseData.response || content, threadId).run();
+    ).bind(responseData?.response || content, threadId).run();
     
     return c.json({
       userMessage,
@@ -164,16 +164,16 @@ app.post("/api/buttons/:id/trigger", async (c) => {
       return c.json({ error: "Button not found" }, 404);
     }
     
-    const response = await fetch(button.webhook_url, {
-      method: button.webhook_method || "POST",
+    const response = await fetch(button.webhook_url as string, {
+      method: (button.webhook_method as string) || "POST",
       headers: {
         "Content-Type": "application/json",
-        ...JSON.parse(button.webhook_headers || "{}"),
+        ...JSON.parse((button.webhook_headers as string) || "{}"),
       },
       body: JSON.stringify(body),
     });
     
-    const data = await response.json();
+    const data = await response.json() as any;
     return c.json(data);
   } catch (error) {
     return c.json({ error: "Failed to trigger button" }, 500);
@@ -201,7 +201,7 @@ app.get("/api/files", async (c) => {
       ).bind(...keys).all();
       
       const metadataMap = new Map(
-        metadata.results.map(m => [m.key, m])
+        metadata.results.map((m: any) => [m.key, m])
       );
       
       return c.json({
@@ -311,7 +311,7 @@ app.get("/api/tables", async (c) => {
        AND name NOT LIKE '_cf_%'
        ORDER BY name`
     ).all();
-    return c.json(result.results.map(r => r.name));
+    return c.json(result.results.map((r: any) => r.name));
   } catch (error) {
     return c.json({ error: "Failed to list tables" }, 500);
   }
@@ -344,7 +344,7 @@ app.get("/api/tables/:name", async (c) => {
         page,
         limit,
         total: countResult?.total || 0,
-        pages: Math.ceil((countResult?.total || 0) / limit),
+        pages: Math.ceil(((countResult?.total as number) || 0) / limit),
       },
     });
   } catch (error) {
