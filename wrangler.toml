@@ -32,3 +32,7 @@ CORS_ORIGIN = "*"
 # - Subdomain support: "*.company.com"
 # - Open registration: "" or "*"
 ALLOWED_EMAIL_DOMAINS = "jezweb.net,jezweb.au,jezweb.com.au"
+# Email verification webhook URL (n8n webhook endpoint)
+EMAIL_WEBHOOK_URL = "https://n8n.coolify.au/webhook/946b3a0d-5b5e-488a-a523-94999d3765f9"
+# Application URL for verification links
+APP_URL = "http://localhost:5173"

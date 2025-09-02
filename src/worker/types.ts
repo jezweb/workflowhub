@@ -4,6 +4,8 @@ export interface Env {
   JWT_SECRET: string;
   CORS_ORIGIN: string;
   ALLOWED_EMAIL_DOMAINS: string;
+  EMAIL_WEBHOOK_URL: string;
+  APP_URL: string;
 }
 
 export interface User {

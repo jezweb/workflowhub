@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
 
 // Pages
 import { LoginPage } from '@/pages/Login';
+import { EmailVerification } from '@/pages/EmailVerification';
 import { DashboardPage } from '@/pages/Dashboard';
 import { FormsPage } from '@/pages/Forms';
 import { FilesPage } from '@/pages/Files';
@@ -30,6 +31,7 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/verify-email" element={<EmailVerification />} />
           
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>

@@ -1,5 +1,49 @@
 # WorkflowHub 2.0 Development Progress
 
+## Email Verification System - IN PROGRESS 🚧 (2025-09-02)
+
+### Problem Statement
+Current system allows immediate access after registration with unverified emails from allowed domains. This is a security risk as anyone can register with fake emails.
+
+### Solution Architecture
+Implementing token-based email verification using n8n webhook for email delivery.
+
+### Implementation Plan
+1. **Database Schema Changes**
+   - Add `email_verified` BOOLEAN field (default FALSE)
+   - Add `verification_token` TEXT field for unique tokens
+   - Add `verification_expires` DATETIME for token expiry
+   - Add `verification_sent_at` DATETIME for rate limiting
+
+2. **Backend Changes**
+   - Generate secure verification tokens on registration
+   - Store tokens with 24-hour expiration
+   - Create unverified users (cannot login until verified)
+   - Send verification email via n8n webhook
+   - New endpoints: verify-email, resend-verification
+
+3. **Frontend Changes**
+   - Post-registration verification prompt
+   - Email verification page
+   - Resend verification option
+   - Block login for unverified users
+
+4. **n8n Integration**
+   - Webhook receives: email, verification_link, user_name
+   - n8n sends formatted verification email
+   - Configurable email templates
+
+### Files to Modify
+- [ ] Create migration: `0004_email_verification.sql`
+- [ ] Update `src/worker/routes/auth.ts`
+- [ ] Create `src/worker/utils/verification.ts`
+- [ ] Update `src/pages/Login.tsx`
+- [ ] Create `src/pages/EmailVerification.tsx`
+- [ ] Update `src/lib/api.ts`
+- [ ] Update `wrangler.toml` with new env vars
+
+---
+
 ## Email Domain Restrictions - COMPLETED ✅ (2025-09-02)
 
 ### Implementation Summary

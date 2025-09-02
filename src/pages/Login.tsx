@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -38,9 +38,14 @@ interface AllowedDomainsInfo {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, register, error, clearError } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [allowedDomains, setAllowedDomains] = useState<AllowedDomainsInfo | null>(null);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [resendEmail, setResendEmail] = useState<string | null>(null);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -74,15 +79,38 @@ export function LoginPage() {
       }
     };
     fetchAllowedDomains();
-  }, []);
+    
+    // Check if user was just verified
+    if (searchParams.get('verified') === 'true') {
+      clearError();
+      setVerificationError(null);
+    }
+  }, [searchParams, clearError]);
 
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
+    setVerificationError(null);
     try {
-      await login(data.username, data.password);
-      navigate('/dashboard');
-    } catch {
-      // Error is handled in the store
+      const response = await api.post('/auth/login', data);
+      const result = await response.json();
+      
+      if (!response.ok) {
+        if (result.requiresVerification) {
+          setVerificationError(result.error);
+          setResendEmail(result.email);
+        } else {
+          throw new Error(result.error || 'Login failed');
+        }
+      } else {
+        await login(data.username, data.password);
+        navigate('/dashboard');
+      }
+    } catch (error: any) {
+      // Error is handled in the store or above
+      if (!verificationError) {
+        // Let the store handle the error
+        await login(data.username, data.password);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -110,13 +138,46 @@ export function LoginPage() {
     }
 
     setIsLoading(true);
+    setRegistrationSuccess(false);
     try {
+      const response = await api.post('/auth/register', {
+        username: data.username,
+        email: data.email,
+        password: data.password
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok && result.requiresVerification) {
+        setRegistrationSuccess(true);
+        setResendEmail(data.email);
+        registerForm.reset();
+      } else if (!response.ok) {
+        throw new Error(result.error || 'Registration failed');
+      }
+    } catch (error: any) {
+      // Let the store handle the error
       await register(data.username, data.email, data.password);
-      navigate('/dashboard');
-    } catch {
-      // Error is handled in the store
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleResendVerification = async () => {
+    if (!resendEmail) return;
+    
+    setResendMessage(null);
+    try {
+      const response = await api.post('/auth/resend-verification', { email: resendEmail });
+      const result = await response.json();
+      
+      if (response.ok) {
+        setResendMessage(result.message || 'Verification email sent!');
+      } else {
+        setResendMessage(result.error || 'Failed to resend email');
+      }
+    } catch (error) {
+      setResendMessage('Failed to resend verification email');
     }
   };
 
@@ -144,7 +205,38 @@ export function LoginPage() {
               </CardHeader>
               <form onSubmit={loginForm.handleSubmit(onLogin)}>
                 <CardContent className="space-y-4">
-                  {error && (
+                  {searchParams.get('verified') === 'true' && (
+                    <Alert className="bg-green-50 border-green-200">
+                      <AlertDescription className="text-green-800">
+                        Email verified successfully! You can now log in.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {verificationError && (
+                    <Alert className="bg-yellow-50 border-yellow-200">
+                      <AlertDescription className="text-yellow-800">
+                        {verificationError}
+                        {resendEmail && (
+                          <div className="mt-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleResendVerification}
+                            >
+                              Resend Verification Email
+                            </Button>
+                            {resendMessage && (
+                              <p className="text-sm mt-2">{resendMessage}</p>
+                            )}
+                          </div>
+                        )}
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {error && !verificationError && (
                     <Alert variant="destructive">
                       <AlertDescription>{error}</AlertDescription>
                     </Alert>
@@ -194,7 +286,9 @@ export function LoginPage() {
               <CardHeader>
                 <CardTitle>Create an account</CardTitle>
                 <CardDescription>
-                  {allowedDomains && !allowedDomains.isOpen ? (
+                  {registrationSuccess ? (
+                    <span className="text-green-600">Check your email to verify your account</span>
+                  ) : allowedDomains && !allowedDomains.isOpen ? (
                     <span className="text-amber-600">{allowedDomains.message}</span>
                   ) : (
                     'Get started with WorkflowHub today'
@@ -203,13 +297,37 @@ export function LoginPage() {
               </CardHeader>
               <form onSubmit={registerForm.handleSubmit(onRegister)}>
                 <CardContent className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{error}</AlertDescription>
+                  {registrationSuccess ? (
+                    <Alert className="bg-green-50 border-green-200">
+                      <AlertDescription className="text-green-800">
+                        <div className="space-y-2">
+                          <p>Registration successful! We've sent a verification email to {resendEmail}.</p>
+                          <p>Please check your inbox and click the verification link to activate your account.</p>
+                          <div className="mt-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleResendVerification}
+                            >
+                              Resend Verification Email
+                            </Button>
+                            {resendMessage && (
+                              <p className="text-sm mt-2">{resendMessage}</p>
+                            )}
+                          </div>
+                        </div>
+                      </AlertDescription>
                     </Alert>
-                  )}
-                  
-                  <div className="space-y-2">
+                  ) : (
+                    <>
+                      {error && (
+                        <Alert variant="destructive">
+                          <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                      )}
+                      
+                      <div className="space-y-2">
                     <Label htmlFor="register-username">Username</Label>
                     <Input
                       id="register-username"
@@ -268,11 +386,15 @@ export function LoginPage() {
                       </p>
                     )}
                   </div>
+                    </>
+                  )}
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? 'Creating account...' : 'Register'}
-                  </Button>
+                  {!registrationSuccess && (
+                    <Button type="submit" className="w-full" disabled={isLoading}>
+                      {isLoading ? 'Creating account...' : 'Register'}
+                    </Button>
+                  )}
                 </CardFooter>
               </form>
             </Card>
