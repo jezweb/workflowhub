@@ -39,7 +39,7 @@ interface AllowedDomainsInfo {
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, register, error, clearError } = useAuthStore();
+  const { login, error, clearError } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
   const [allowedDomains, setAllowedDomains] = useState<AllowedDomainsInfo | null>(null);
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
@@ -107,10 +107,7 @@ export function LoginPage() {
       }
     } catch (error: any) {
       // Error is handled in the store or above
-      if (!verificationError) {
-        // Let the store handle the error
-        await login(data.username, data.password);
-      }
+      // Don't attempt login on error - this was causing verification bypass
     } finally {
       setIsLoading(false);
     }
