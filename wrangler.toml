@@ -34,5 +34,22 @@ CORS_ORIGIN = "*"
 ALLOWED_EMAIL_DOMAINS = "jezweb.net,jezweb.au,jezweb.com.au"
 # Email verification webhook URL (n8n webhook endpoint)
 EMAIL_WEBHOOK_URL = "https://n8n.coolify.au/webhook/946b3a0d-5b5e-488a-a523-94999d3765f9"
-# Application URL for verification links
+# Application URL for verification links (update for production)
 APP_URL = "http://localhost:5173"
+
+# Production environment overrides
+[env.production.vars]
+JWT_SECRET = "change-this-in-production"
+CORS_ORIGIN = "*"
+ALLOWED_EMAIL_DOMAINS = "jezweb.net,jezweb.au,jezweb.com.au"
+EMAIL_WEBHOOK_URL = "https://n8n.coolify.au/webhook/946b3a0d-5b5e-488a-a523-94999d3765f9"
+APP_URL = "https://workflowhub.webfonts.workers.dev"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "workflowhub"
+database_id = "b8a61769-5479-4b7d-acbb-904159de6d36"
+
+[[env.production.r2_buckets]]
+binding = "STORAGE"
+bucket_name = "workflowhub-files"
