@@ -41,13 +41,14 @@ export default function ChatInterface({ conversationId, onConversationUpdate }: 
     setLoading(true);
     try {
       const response = await api.get(`/conversations/${conversationId}`);
-      if (response.data.success) {
-        setConversation(response.data.conversation);
-        setMessages(response.data.messages || []);
+      const data: any = await response.json();
+      if (data.success) {
+        setConversation(data.conversation);
+        setMessages(data.messages || []);
       } else {
         toast({
           title: 'Error',
-          description: response.data.error || 'Failed to load conversation',
+          description: data.error || 'Failed to load conversation',
           variant: 'destructive',
         });
       }

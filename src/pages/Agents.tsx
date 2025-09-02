@@ -24,8 +24,9 @@ export default function Agents() {
   const fetchAgents = async () => {
     try {
       const response = await api.get('/agents');
-      if (response.data.success) {
-        setAgents(response.data.agents);
+      const data: any = await response.json();
+      if (data.success) {
+        setAgents(data.agents);
       }
     } catch (error) {
       toast({

@@ -32,12 +32,15 @@ export function ChatPage() {
         api.get('/agents')
       ]);
 
-      if (conversationsResponse.data.success) {
-        setConversations(conversationsResponse.data.conversations || []);
+      const conversationsData: any = await conversationsResponse.json();
+      const agentsData: any = await agentsResponse.json();
+
+      if (conversationsData.success) {
+        setConversations(conversationsData.conversations || []);
       }
 
-      if (agentsResponse.data.success) {
-        setAgents(agentsResponse.data.agents || []);
+      if (agentsData.success) {
+        setAgents(agentsData.agents || []);
       }
     } catch (error) {
       toast({
