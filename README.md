@@ -13,6 +13,8 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 - Role-based access control (User/Admin)
 - Protected routes for secure areas
 - Configurable email domain restrictions for registration
+- Email verification system with token-based validation
+- 24-hour verification links with resend capability
 
 ### 📝 Dynamic Forms
 - Visual form builder with drag-and-drop
@@ -221,6 +223,10 @@ ALLOWED_EMAIL_DOMAINS=*  # Use "*" for open registration
 # ALLOWED_EMAIL_DOMAINS=company.com,partner.org  # Multiple domains
 # ALLOWED_EMAIL_DOMAINS=*.company.com  # Subdomain support
 
+# Email Verification
+EMAIL_WEBHOOK_URL=https://n8n.example.com/webhook/xxx  # n8n webhook for sending emails
+APP_URL=http://localhost:5173  # Base URL for verification links
+
 # Optional
 DEFAULT_WEBHOOK_URL=https://n8n.example.com/webhook/xxx
 SENTRY_DSN=your_sentry_dsn
@@ -229,17 +235,28 @@ DEBUG=false
 
 ### n8n Integration
 
-1. Create webhooks in n8n for each integration point
+#### Email Verification Webhook
+1. Create a webhook in n8n that accepts POST requests
+2. Add an email node (SMTP, SendGrid, etc.) after the webhook
+3. Use these expressions in your email template:
+   - To: `{{$json.email}}`
+   - Subject: `{{$json.subject}}`
+   - Username: `{{$json.username}}`
+   - Verification Link: `{{$json.verificationLink}}`
+   - Expiry Hours: `{{$json.expiryHours}}`
+
+#### Chat Integration
+1. Create webhooks in n8n for chat functionality
 2. Configure webhook URLs in Settings page
 3. Test connections using the Test button
 
 Example n8n webhook node configuration:
 ```json
 {
-  "webhookDescription": "WorkflowHub Chat",
-  "path": "workflowhub-chat",
-  "responseMode": "responseNode",
-  "responseData": "allEntries"
+  "webhookDescription": "WorkflowHub Email Verification",
+  "path": "workflowhub-verify",
+  "httpMethod": "POST",
+  "responseMode": "responseNode"
 }
 ```
 

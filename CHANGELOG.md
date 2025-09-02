@@ -5,6 +5,31 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.4] - 2025-09-02
+
+### Added
+- **Email Verification System**: Complete email verification workflow for new registrations
+  - Verification tokens with 24-hour expiration
+  - Email sending via n8n webhook integration
+  - Verification page with token validation
+  - Resend verification with 5-minute rate limiting
+  - Block login for unverified accounts
+  - Success messages and user guidance throughout flow
+
+### Security
+- Users must now verify email addresses before accessing the application
+- Prevents fake email registrations even with valid domains
+- Secure token generation using crypto API
+- Rate limiting on verification email resends
+
+### Changed
+- Registration now creates unverified users
+- Login checks email verification status
+- Added verification prompts and messages to UI
+
+### Database
+- Added email_verified, verification_token, verification_expires, verification_sent_at fields to users table
+
 ## [2.0.3] - 2025-09-02
 
 ### Added
