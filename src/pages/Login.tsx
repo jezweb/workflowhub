@@ -34,8 +34,9 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login, register, error, clearError } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
-  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [registrationEnabled, setRegistrationEnabled] = useState(false); // Default to disabled
   const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
+  const [registrationCheckComplete, setRegistrationCheckComplete] = useState(false);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -65,6 +66,9 @@ export function LoginPage() {
         setRegistrationMessage(data.message);
       } catch (error) {
         console.error('Failed to check registration status:', error);
+        // On error, keep registration disabled
+      } finally {
+        setRegistrationCheckComplete(true);
       }
     };
     checkRegistrationStatus();
@@ -102,7 +106,16 @@ export function LoginPage() {
           <p className="mt-2 text-gray-600">Simplify your workflows</p>
         </div>
 
-        {registrationEnabled ? (
+        {!registrationCheckComplete ? (
+          <Card>
+            <CardContent className="flex items-center justify-center py-8">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mb-4"></div>
+                <p className="text-gray-600">Loading...</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : registrationEnabled ? (
           <Tabs defaultValue="login" className="w-full" onValueChange={() => clearError()}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="login">Login</TabsTrigger>
