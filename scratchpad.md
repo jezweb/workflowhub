@@ -1,5 +1,22 @@
 # WorkflowHub 2.0 Development Progress
 
+## Critical Security Fix - Email Verification Bypass - COMPLETED ✅ (2025-09-02)
+
+### Problem
+Users could bypass email verification and get immediate dashboard access after registration due to:
+1. Fallback logic in Login.tsx calling store's register() in catch block
+2. AuthStore's register function expected token and auto-logged in users
+3. This completely bypassed the email verification requirement
+
+### Solution Implemented
+✅ Removed token handling from authStore register function
+✅ Removed fallback to store register in Login.tsx catch block
+✅ Registration now only shows success message, no auto-login
+✅ Proper error handling for registration failures
+✅ Users must verify email before accessing dashboard
+
+---
+
 ## Email Verification System - COMPLETED ✅ (2025-09-02)
 
 ### Problem Statement

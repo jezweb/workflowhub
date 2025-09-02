@@ -139,6 +139,8 @@ export function LoginPage() {
 
     setIsLoading(true);
     setRegistrationSuccess(false);
+    clearError(); // Clear any previous errors
+    
     try {
       const response = await api.post('/auth/register', {
         username: data.username,
@@ -153,11 +155,18 @@ export function LoginPage() {
         setResendEmail(data.email);
         registerForm.reset();
       } else if (!response.ok) {
-        throw new Error(result.error || 'Registration failed');
+        // Show the error from the server
+        registerForm.setError('root', {
+          type: 'manual',
+          message: result.error || 'Registration failed'
+        });
       }
     } catch (error: any) {
-      // Let the store handle the error
-      await register(data.username, data.email, data.password);
+      // Network or other error
+      registerForm.setError('root', {
+        type: 'manual',
+        message: error.message || 'Registration failed. Please try again.'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -321,9 +330,11 @@ export function LoginPage() {
                     </Alert>
                   ) : (
                     <>
-                      {error && (
+                      {(error || registerForm.formState.errors.root) && (
                         <Alert variant="destructive">
-                          <AlertDescription>{error}</AlertDescription>
+                          <AlertDescription>
+                            {registerForm.formState.errors.root?.message || error}
+                          </AlertDescription>
                         </Alert>
                       )}
                       

@@ -14,7 +14,7 @@ interface AuthState {
   error: string | null;
   
   login: (username: string, password: string) => Promise<void>;
-  register: (username: string, email: string, password: string) => Promise<void>;
+  register: (username: string, email: string, password: string) => Promise<any>;
   logout: () => void;
   verifyToken: () => Promise<void>;
   clearError: () => void;
@@ -52,11 +52,18 @@ export const useAuthStore = create<AuthState>((set) => {
       set({ isLoading: true, error: null });
       try {
         const response = await authApi.register(username, email, password);
-        localStorage.setItem('token', response.token);
+        // Don't store token or log in user - they need to verify email first
+        if (response.requiresVerification) {
+          set({
+            isLoading: false,
+            error: null, // Registration successful, no error
+          });
+          return response; // Return response so caller knows verification is required
+        }
+        // This shouldn't happen with current backend, but handle it just in case
         set({
-          user: response.user,
-          token: response.token,
           isLoading: false,
+          error: 'Unexpected response from server',
         });
       } catch (error: any) {
         set({
