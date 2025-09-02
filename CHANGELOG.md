@@ -5,7 +5,7 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - 2025-09-01
+## [2.0.0] - 2025-09-02
 
 ### Added
 - Complete rewrite from scratch with simplified architecture
@@ -16,7 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Custom headers and payload templates
   - Dynamic variable substitution
   - Three response types (modal, toast, page)
-- File management with virtual folders
+- Complete file management system with R2 storage
+  - Multi-file upload with drag-and-drop
+  - Grid and table view modes
+  - Image thumbnails and file type icons
+  - 4MB file size limit for AutoRAG compatibility
+  - File sorting and search capabilities
 - Nested chat conversations with SSE streaming
 - Interactive database viewer with inline editing
 - Customizable dashboard with widgets

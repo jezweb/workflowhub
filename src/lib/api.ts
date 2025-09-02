@@ -148,9 +148,11 @@ export const databaseApi = {
 export const filesApi = {
   list: () => apiRequest('/files'),
   
-  upload: async (file: File) => {
+  upload: async (files: File[]) => {
     const formData = new FormData();
-    formData.append('file', file);
+    files.forEach((file, index) => {
+      formData.append(`file-${index}`, file);
+    });
     
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/files/upload`, {

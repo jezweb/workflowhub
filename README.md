@@ -18,11 +18,13 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 - Webhook integration for form submissions
 
 ### 📁 File Management
-- R2-powered file storage
-- Virtual folder structure
-- Drag-and-drop uploads
-- Grid and list view options
-- File preview and metadata
+- R2-powered file storage with 4MB limit (AutoRAG compatible)
+- Multi-file upload with drag-and-drop zone
+- Grid view with image thumbnails
+- Table view with sortable columns
+- File type icons and metadata display
+- Direct download and delete operations
+- Upload progress tracking
 
 ### 💬 Chat System
 - Nested conversation structure
