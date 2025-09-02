@@ -20,6 +20,11 @@ const registerSchema = z.object({
 
 // Register endpoint
 app.post('/register', async (c) => {
+  // Check if registration is disabled
+  if (c.env.DISABLE_REGISTRATION === 'true') {
+    return c.json({ error: 'Registration is currently disabled' }, 403);
+  }
+  
   try {
     const body = await c.req.json();
     const data = registerSchema.parse(body);
@@ -144,6 +149,15 @@ app.get('/verify', async (c) => {
   } catch {
     return c.json({ valid: false }, 401);
   }
+});
+
+// Registration status endpoint
+app.get('/registration-status', async (c) => {
+  const isDisabled = c.env.DISABLE_REGISTRATION === 'true';
+  return c.json({
+    registrationEnabled: !isDisabled,
+    message: isDisabled ? 'Registration is currently disabled. Please contact an administrator for access.' : null
+  });
 });
 
 export default app;

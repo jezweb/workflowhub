@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import api from '@/lib/api';
 
 const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -33,6 +34,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const { login, register, error, clearError } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [registrationEnabled, setRegistrationEnabled] = useState(true);
+  const [registrationMessage, setRegistrationMessage] = useState<string | null>(null);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -51,6 +54,21 @@ export function LoginPage() {
       confirmPassword: '',
     },
   });
+
+  useEffect(() => {
+    // Check if registration is enabled
+    const checkRegistrationStatus = async () => {
+      try {
+        const response = await api.get('/auth/registration-status');
+        const data = await response.json();
+        setRegistrationEnabled(data.registrationEnabled);
+        setRegistrationMessage(data.message);
+      } catch (error) {
+        console.error('Failed to check registration status:', error);
+      }
+    };
+    checkRegistrationStatus();
+  }, []);
 
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
@@ -84,14 +102,15 @@ export function LoginPage() {
           <p className="mt-2 text-gray-600">Simplify your workflows</p>
         </div>
 
-        <Tabs defaultValue="login" className="w-full" onValueChange={() => clearError()}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="login">Login</TabsTrigger>
-            <TabsTrigger value="register">Register</TabsTrigger>
-          </TabsList>
+        {registrationEnabled ? (
+          <Tabs defaultValue="login" className="w-full" onValueChange={() => clearError()}>
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="login">Login</TabsTrigger>
+              <TabsTrigger value="register">Register</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="login">
-            <Card>
+            <TabsContent value="login">
+              <Card>
               <CardHeader>
                 <CardTitle>Welcome back</CardTitle>
                 <CardDescription>
@@ -230,6 +249,65 @@ export function LoginPage() {
             </Card>
           </TabsContent>
         </Tabs>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Welcome to WorkflowHub</CardTitle>
+              <CardDescription>
+                Enter your credentials to access your account
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={loginForm.handleSubmit(onLogin)}>
+              <CardContent className="space-y-4">
+                {registrationMessage && (
+                  <Alert>
+                    <AlertDescription>{registrationMessage}</AlertDescription>
+                  </Alert>
+                )}
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Enter your username"
+                    {...loginForm.register('username')}
+                  />
+                  {loginForm.formState.errors.username && (
+                    <p className="text-sm text-red-500">
+                      {loginForm.formState.errors.username.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Enter your password"
+                    {...loginForm.register('password')}
+                  />
+                  {loginForm.formState.errors.password && (
+                    <p className="text-sm text-red-500">
+                      {loginForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Logging in...' : 'Login'}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        )}
       </div>
     </div>
   );
