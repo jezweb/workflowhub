@@ -124,27 +124,48 @@ CREATE TABLE files (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Chat conversations (nested structure)
-CREATE TABLE conversations (
-  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-  parent_id TEXT REFERENCES conversations(id),
+-- AI Agents (n8n webhook integration)
+CREATE TABLE agents (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
   name TEXT NOT NULL,
-  path TEXT NOT NULL, -- e.g., "/folder1/folder2/chat"
-  webhook_url TEXT,
-  is_folder BOOLEAN DEFAULT FALSE,
-  created_by TEXT REFERENCES users(id),
+  description TEXT,
+  avatar_url TEXT,
+  system_prompt TEXT,
+  webhook_url TEXT NOT NULL,
+  webhook_method TEXT DEFAULT 'POST',
+  history_webhook_url TEXT,
+  model TEXT DEFAULT 'gpt-4',
+  temperature REAL DEFAULT 0.7,
+  max_tokens INTEGER DEFAULT 2000,
+  is_active BOOLEAN DEFAULT TRUE,
+  is_public BOOLEAN DEFAULT FALSE,
+  metadata JSON,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- Chat messages
-CREATE TABLE messages (
-  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-  conversation_id TEXT NOT NULL REFERENCES conversations(id),
-  content TEXT NOT NULL,
-  role TEXT NOT NULL, -- 'user' or 'assistant'
-  attachments_json TEXT, -- File references
+-- Agent configurations (headers, parameters, secrets)
+CREATE TABLE agent_configurations (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL REFERENCES agents(id),
+  config_key TEXT NOT NULL,
+  config_value TEXT NOT NULL,
+  config_type TEXT DEFAULT 'header', -- 'header', 'parameter', 'secret'
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Chat conversations (minimal tracking, n8n owns history)
+CREATE TABLE conversations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  agent_id TEXT NOT NULL REFERENCES agents(id),
+  title TEXT,
+  last_message_at DATETIME,
+  message_count INTEGER DEFAULT 0,
+  metadata JSON,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Settings store
@@ -239,6 +260,25 @@ PUT    /api/settings/:key    - Update setting
 DELETE /api/settings/:key    - Delete setting
 POST   /api/settings/export  - Export settings
 POST   /api/settings/import  - Import settings
+```
+
+### Agents API
+```
+GET    /api/agents           - List agents (user's + public)
+GET    /api/agents/:id       - Get agent with configurations
+POST   /api/agents           - Create new agent
+PUT    /api/agents/:id       - Update agent
+DELETE /api/agents/:id       - Delete agent
+POST   /api/agents/:id/test  - Test agent webhook
+```
+
+### Chat API (Minimal - n8n owns history)
+```
+GET    /api/chat/conversations        - List conversations
+POST   /api/chat/conversations        - Create conversation
+GET    /api/chat/conversations/:id    - Get conversation metadata
+DELETE /api/chat/conversations/:id    - Delete conversation
+POST   /api/chat/conversations/:id/messages - Send message to agent
 ```
 
 ### Dashboard API
@@ -494,6 +534,77 @@ worker/
 - Works well with edge computing
 - Easy to scale horizontally
 - Standard format
+
+## Agent & Chat Architecture
+
+### Design Philosophy
+WorkflowHub's AI chat system follows a **separation of concerns** approach:
+- **WorkflowHub**: UI orchestration, agent management, minimal conversation tracking
+- **n8n**: AI processing, conversation memory, message history storage
+
+### Architecture Flow
+```
+┌─────────────┐    ┌──────────────┐    ┌─────────────┐
+│ WorkflowHub │───▶│ Agent Config │───▶│     n8n     │
+│     UI      │    │  + Headers   │    │  Workflow   │
+└─────────────┘    └──────────────┘    └─────────────┘
+       │                                       │
+       │           ┌─────────────┐            │
+       └──────────▶│ Conversation│◀───────────┘
+                   │  Metadata   │
+                   └─────────────┘
+                         │
+                   ┌─────▼─────┐
+                   │  n8n D1   │
+                   │ Chat Mem  │
+                   └───────────┘
+```
+
+### Agent Configuration System
+1. **Agent Definition**: Name, description, model settings
+2. **Webhook Integration**: n8n workflow endpoint
+3. **Dynamic Configuration**: Headers, parameters passed to n8n
+4. **Flexible Models**: Support for GPT, Claude, Gemini via n8n
+5. **Public/Private**: Share agents with team or keep private
+
+### Memory Management
+- **WorkflowHub Stores**: Agent metadata, conversation titles, message counts
+- **n8n Stores**: Complete message history using D1 Chat Memory nodes
+- **File Handling**: Base64 for small files, R2 URLs for large files
+- **Context Persistence**: n8n manages conversation context across sessions
+
+### Webhook Protocol
+```json
+{
+  "message": "User input",
+  "agent_config": {
+    "name": "Assistant Name",
+    "system_prompt": "You are...",
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "attachments": [
+    {"name": "file.pdf", "data": "base64..." },
+    {"name": "large.pdf", "url": "https://r2.../file.pdf"}
+  ],
+  "conversation_id": "conv_123",
+  "metadata": { "custom": "values" }
+}
+```
+
+### Benefits of This Architecture
+1. **Scalability**: n8n handles AI processing load
+2. **Flexibility**: Easy to add new AI providers in n8n
+3. **Simplicity**: WorkflowHub focuses on UI/UX
+4. **Cost Efficiency**: Only pay for AI when used
+5. **Reliability**: n8n handles retries and error management
+
+### Agent Testing System
+- **Live Testing**: Test webhooks directly from UI
+- **Configuration Validation**: Ensure proper setup
+- **Response Time Monitoring**: Track performance
+- **Error Debugging**: Clear error messages
 
 ## Future Considerations
 

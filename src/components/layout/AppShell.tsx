@@ -12,6 +12,7 @@ import {
   LogOut,
   Menu,
   X,
+  Bot,
 } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Forms', href: '/forms', icon: FileText },
   { name: 'Files', href: '/files', icon: FolderOpen },
   { name: 'Database', href: '/database', icon: Database },
+  { name: 'Agents', href: '/agents', icon: Bot },
   { name: 'Chat', href: '/chat', icon: MessageSquare },
   { name: 'Actions', href: '/actions', icon: Zap },
   { name: 'Settings', href: '/settings', icon: Settings },

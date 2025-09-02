@@ -11,6 +11,7 @@ import databaseRoutes from './routes/database';
 import chatRoutes from './routes/chat';
 import actionsRoutes from './routes/actions';
 import settingsRoutes from './routes/settings';
+import agentsRoutes from './routes/agents';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -23,10 +24,13 @@ app.use('*', cors({
 // Public routes
 app.route('/api/auth', authRoutes);
 
-// Protected routes - apply JWT middleware to each protected route group
-const authMiddleware = jwt({
-  secret: 'dev-secret', // Use the same secret for now
-});
+// Create a middleware that dynamically gets JWT secret
+const authMiddleware = async (c: any, next: any) => {
+  const jwtMiddleware = jwt({
+    secret: c.env.JWT_SECRET || 'change-this-in-production',
+  });
+  return jwtMiddleware(c, next);
+};
 
 // Apply auth middleware to protected routes
 app.use('/api/forms/*', authMiddleware);
@@ -35,6 +39,7 @@ app.use('/api/database/*', authMiddleware);
 app.use('/api/chat/*', authMiddleware);
 app.use('/api/actions/*', authMiddleware);
 app.use('/api/settings/*', authMiddleware);
+app.use('/api/agents/*', authMiddleware);
 
 // Protected API routes
 app.route('/api/forms', formsRoutes);
@@ -43,6 +48,7 @@ app.route('/api/database', databaseRoutes);
 app.route('/api/chat', chatRoutes);
 app.route('/api/actions', actionsRoutes);
 app.route('/api/settings', settingsRoutes);
+app.route('/api/agents', agentsRoutes);
 
 // Health check
 app.get('/api/health', (c) => {

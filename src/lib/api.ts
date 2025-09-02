@@ -229,3 +229,21 @@ export const settingsApi = {
       method: 'DELETE',
     }),
 };
+
+// Convenience default export with all APIs
+const api = {
+  get: (url: string) => apiRequest(url),
+  post: (url: string, data?: any) => apiRequest(url, {
+    method: 'POST',
+    body: data ? JSON.stringify(data) : undefined,
+  }),
+  put: (url: string, data?: any) => apiRequest(url, {
+    method: 'PUT',
+    body: data ? JSON.stringify(data) : undefined,
+  }),
+  delete: (url: string) => apiRequest(url, {
+    method: 'DELETE',
+  }),
+};
+
+export default api;

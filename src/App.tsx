@@ -13,6 +13,7 @@ import { DatabasePage } from '@/pages/Database';
 import { ChatPage } from '@/pages/Chat';
 import { ActionsPage } from '@/pages/Actions';
 import { SettingsPage } from '@/pages/Settings';
+import AgentsPage from '@/pages/Agents';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +38,7 @@ function App() {
               <Route path="/forms" element={<FormsPage />} />
               <Route path="/files" element={<FilesPage />} />
               <Route path="/database" element={<DatabasePage />} />
+              <Route path="/agents" element={<AgentsPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/actions" element={<ActionsPage />} />
               <Route path="/settings" element={<SettingsPage />} />
