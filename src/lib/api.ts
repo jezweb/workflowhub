@@ -140,8 +140,45 @@ export const chatApi = {
 export const databaseApi = {
   listTables: () => apiRequest('/database/tables'),
   
-  getTableData: (tableName: string) =>
-    apiRequest(`/database/tables/${tableName}`),
+  getTableSchema: (tableName: string) =>
+    apiRequest(`/database/tables/${tableName}/schema`),
+  
+  getTableData: (tableName: string, params?: {
+    page?: number;
+    pageSize?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    search?: string;
+  }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.pageSize) query.append('pageSize', params.pageSize.toString());
+    if (params?.sortBy) query.append('sortBy', params.sortBy);
+    if (params?.sortOrder) query.append('sortOrder', params.sortOrder);
+    if (params?.search) query.append('search', params.search);
+    
+    return apiRequest(`/database/tables/${tableName}/data?${query.toString()}`);
+  },
+  
+  exportTable: (tableName: string, format: 'json' | 'csv', allData = false) => {
+    const query = new URLSearchParams({
+      format,
+      all: allData.toString()
+    });
+    
+    const token = localStorage.getItem('token');
+    return fetch(`${API_BASE_URL}/database/tables/${tableName}/export?${query.toString()}`, {
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+    });
+  },
+  
+  executeQuery: (query: string) =>
+    apiRequest('/database/query', {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+    }),
 };
 
 // Files API

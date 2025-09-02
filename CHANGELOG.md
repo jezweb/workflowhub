@@ -22,8 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Image thumbnails and file type icons
   - 4MB file size limit for AutoRAG compatibility
   - File sorting and search capabilities
-- Nested chat conversations with SSE streaming
-- Interactive database viewer with inline editing
+- Database viewer with advanced features
+  - Table browser with row counts
+  - Paginated data viewing with sorting
+  - Text search across columns
+  - Export to CSV and JSON formats
+  - Responsive column type formatting
+- Nested chat conversations with SSE streaming (planned)
 - Customizable dashboard with widgets
 - shadcn/ui component library integration
 - Full TypeScript coverage
