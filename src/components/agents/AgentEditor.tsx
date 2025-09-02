@@ -77,7 +77,7 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
 
   const loadConfigurations = async (agentId: string) => {
     try {
-      const response = await api.get(`/api/agents/${agentId}`);
+      const response = await api.get(`/agents/${agentId}`);
       if (response.data.success && response.data.configurations) {
         setFormData(prev => ({
           ...prev,
@@ -116,14 +116,14 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
     try {
       if (agent) {
         // Update existing agent
-        await api.put(`/api/agents/${agent.id}`, formData);
+        await api.put(`/agents/${agent.id}`, formData);
         toast({
           title: 'Success',
           description: 'Agent updated successfully',
         });
       } else {
         // Create new agent
-        await api.post('/api/agents', formData);
+        await api.post('/agents', formData);
         toast({
           title: 'Success',
           description: 'Agent created successfully',

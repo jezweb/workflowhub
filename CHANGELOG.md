@@ -5,6 +5,45 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2025-09-02
+
+### Added
+- **Email Domain Restrictions**: Configurable email domain allowlist for registration
+  - Support for single or multiple domains (comma-separated)
+  - Wildcard subdomain matching (*.company.com)
+  - Open registration option with "*" or empty value
+  - Client-side validation with helpful messages
+  - API endpoint to fetch allowed domains configuration
+  - Environment variable: `ALLOWED_EMAIL_DOMAINS`
+
+### Changed
+- Updated registration form to display allowed domains information
+- Enhanced registration error messages for domain restrictions
+
+## [2.0.1] - 2025-09-02
+
+### Fixed
+- **Critical**: Fixed 404 errors on page refresh for all routes
+  - Added `not_found_handling = "single-page-application"` configuration in wrangler.toml
+  - Properly configured Cloudflare Workers Static Assets for SPA routing
+- **Critical**: Fixed authentication logout issue on page refresh
+  - Modified authStore to properly handle loading state initialization
+  - Token verification now completes before route decisions
+  - Sessions now persist correctly across page refreshes
+
+### Added
+- AI Agents management interface for creating and managing conversational agents
+- Agent-specific system prompts and instructions
+- Model selection and configuration for agents
+- Knowledge base integration capabilities
+- Live deployment at https://workflowhub.webfonts.workers.dev
+
+### Changed
+- Updated worker configuration to use simplified static asset handling
+- Improved authentication flow with better loading states
+- Enhanced error handling in authentication store
+- Updated documentation with deployment URL and troubleshooting
+
 ## [2.0.0] - 2025-09-02
 
 ### Added

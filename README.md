@@ -2,13 +2,17 @@
 
 A modern business workflow management dashboard built on Cloudflare's edge platform with n8n integration. Designed for simplicity, functionality, and ease of use for small teams.
 
+**Live Demo**: https://workflowhub.webfonts.workers.dev
+
 ## Features
 
 ### 🔐 Authentication & Security
-- Simple username/password authentication
-- JWT-based sessions
+- Simple username/password authentication with bcrypt hashing
+- JWT-based sessions with 7-day expiration
+- Session persistence across page refreshes
 - Role-based access control (User/Admin)
 - Protected routes for secure areas
+- Configurable email domain restrictions for registration
 
 ### 📝 Dynamic Forms
 - Visual form builder with drag-and-drop
@@ -63,12 +67,20 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 - Responsive grid system
 - Per-user customization
 
+### 🤖 AI Agents
+- Create and manage AI-powered conversational agents
+- Custom system prompts and instructions
+- Model selection and configuration
+- Knowledge base integration
+- Agent-specific conversation history
+
 ## Tech Stack
 
-- **Frontend**: React 19, TypeScript, shadcn/ui, Tailwind CSS
-- **Backend**: Cloudflare Workers, Hono, D1 Database, R2 Storage
+- **Frontend**: React 19, TypeScript, shadcn/ui, Tailwind CSS, Zustand, TanStack Query
+- **Backend**: Cloudflare Workers with Static Assets, Hono, D1 Database, R2 Storage
 - **Build**: Vite 6, Wrangler 4
 - **Integration**: n8n webhooks, Server-Sent Events
+- **Authentication**: JWT with bcrypt password hashing
 
 ## Quick Start
 
@@ -110,23 +122,30 @@ Visit http://localhost:5173 to see the application
 workflowhub/
 ├── src/                 # React application
 │   ├── components/      # UI components
+│   │   ├── auth/       # Authentication components
+│   │   ├── layout/     # Layout components
+│   │   └── ui/         # shadcn/ui components
 │   ├── pages/          # Page components
 │   ├── hooks/          # Custom hooks
-│   ├── lib/            # Utilities
-│   └── stores/         # State management
-├── worker/             # Cloudflare Worker
-│   ├── routes/         # API endpoints
-│   ├── middleware/     # Request middleware
-│   └── services/       # Business logic
+│   ├── lib/            # Utilities and API client
+│   ├── stores/         # Zustand state management
+│   └── worker/         # Cloudflare Worker backend
+│       ├── routes/     # API route handlers
+│       ├── utils/      # Backend utilities
+│       └── simple.ts   # Main worker entry
 ├── migrations/         # Database migrations
+├── dist/              # Build output
 └── public/            # Static assets
 ```
 
 ## Development
 
 ```bash
-# Start development server
+# Start frontend development server
 npm run dev
+
+# Start backend development server (in separate terminal)
+npx wrangler dev --local
 
 # Run type checking
 npm run check
@@ -134,11 +153,8 @@ npm run check
 # Build for production
 npm run build
 
-# Preview production build
-npm run preview
-
 # Deploy to Cloudflare
-npm run deploy
+wrangler deploy
 ```
 
 ## API Documentation
@@ -146,9 +162,9 @@ npm run deploy
 The API follows RESTful conventions. All endpoints are prefixed with `/api`.
 
 ### Authentication
+- `POST /api/auth/register` - User registration
 - `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
-- `GET /api/auth/session` - Check session
+- `GET /api/auth/verify` - Verify JWT token
 
 ### Forms
 - `GET /api/forms` - List forms
@@ -165,6 +181,12 @@ The API follows RESTful conventions. All endpoints are prefixed with `/api`.
 - `GET /api/conversations` - List conversations
 - `POST /api/conversations/:id/messages` - Send message (SSE)
 
+### Agents
+- `GET /api/agents` - List AI agents
+- `POST /api/agents` - Create agent
+- `PUT /api/agents/:id` - Update agent
+- `DELETE /api/agents/:id` - Delete agent
+
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete API documentation.
 
 ## Configuration
@@ -176,6 +198,13 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete API documentation.
 CLOUDFLARE_ACCOUNT_ID=your_account_id
 JWT_SECRET=your_secret_key
 DEFAULT_WEBHOOK_URL=https://n8n.example.com/webhook/xxx
+
+# Registration Control
+ALLOWED_EMAIL_DOMAINS=*  # Use "*" for open registration
+# Examples:
+# ALLOWED_EMAIL_DOMAINS=company.com  # Single domain
+# ALLOWED_EMAIL_DOMAINS=company.com,partner.org  # Multiple domains
+# ALLOWED_EMAIL_DOMAINS=*.company.com  # Subdomain support
 
 # Optional
 SENTRY_DSN=your_sentry_dsn
@@ -207,11 +236,13 @@ Example n8n webhook node configuration:
 npm run build
 
 # Deploy to Cloudflare
-npm run deploy
+wrangler deploy
 
-# Apply migrations
-wrangler d1 migrations apply workflowhub --env production
+# Apply migrations to production
+wrangler d1 migrations apply workflowhub --remote
 ```
+
+The application uses Cloudflare Workers with Static Assets for optimal SPA routing and performance.
 
 ### Custom Domain
 
@@ -273,6 +304,10 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed architecture documentation
 **Upload fails**: Check R2 bucket permissions and CORS settings
 
 **Auth issues**: Verify JWT_SECRET is set correctly
+
+**404 on page refresh**: Ensure `not_found_handling = "single-page-application"` is set in wrangler.toml
+
+**Logged out on refresh**: Fixed in latest version - authentication now persists across page refreshes
 
 See [DEPLOYMENT.md](./DEPLOYMENT.md#troubleshooting) for more solutions.
 

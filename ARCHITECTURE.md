@@ -196,11 +196,10 @@ CREATE TABLE dashboard_widgets (
 
 ### Authentication Endpoints
 ```
-POST   /api/auth/register    - Create new user
-POST   /api/auth/login       - Authenticate user
-POST   /api/auth/logout      - End session
-GET    /api/auth/session     - Verify current session
-POST   /api/auth/refresh     - Refresh JWT token
+POST   /api/auth/register       - Create new user
+POST   /api/auth/login          - Authenticate user
+GET    /api/auth/verify         - Verify JWT token
+GET    /api/auth/allowed-domains - Get allowed email domains for registration
 ```
 
 ### Forms API
@@ -307,13 +306,14 @@ POST   /api/dashboard/layout  - Save layout
 
 ### Security Measures
 - Password hashing with bcrypt
-- JWT tokens with 24h expiration
+- JWT tokens with 7-day expiration
 - CORS configured for n8n origins
 - Input validation with Zod
 - SQL injection prevention (parameterized queries)
 - XSS prevention (React escaping)
 - Rate limiting on auth endpoints
 - File upload validation (type, size)
+- Email domain restrictions for registration (configurable)
 
 ## Component Architecture
 

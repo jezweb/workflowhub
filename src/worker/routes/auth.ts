@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { sign, verify } from 'hono/jwt';
 import { z } from 'zod';
 import { hashPassword, verifyPassword } from '../utils/crypto';
+import { isEmailDomainAllowed, getAllowedDomainsMessage } from '../utils/email-validation';
 import type { Env } from '../types';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -23,6 +24,15 @@ app.post('/register', async (c) => {
   try {
     const body = await c.req.json();
     const data = registerSchema.parse(body);
+    
+    // Check if email domain is allowed
+    const allowedDomains = c.env.ALLOWED_EMAIL_DOMAINS || '*';
+    if (!isEmailDomainAllowed(data.email, allowedDomains)) {
+      const message = getAllowedDomainsMessage(allowedDomains);
+      return c.json({ 
+        error: `Email domain not allowed. ${message}` 
+      }, 403);
+    }
     
     // Hash password
     const passwordHash = await hashPassword(data.password);
@@ -144,6 +154,18 @@ app.get('/verify', async (c) => {
   } catch {
     return c.json({ valid: false }, 401);
   }
+});
+
+// Get allowed domains configuration
+app.get('/allowed-domains', async (c) => {
+  const allowedDomains = c.env.ALLOWED_EMAIL_DOMAINS || '*';
+  const message = getAllowedDomainsMessage(allowedDomains);
+  
+  return c.json({
+    domains: allowedDomains === '*' ? [] : allowedDomains.split(',').map(d => d.trim()),
+    isOpen: allowedDomains === '' || allowedDomains === '*',
+    message
+  });
 });
 
 export default app;

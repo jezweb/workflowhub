@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { api } from '@/lib/api';
 
 const loginSchema = z.object({
   username: z.string().min(3, 'Username must be at least 3 characters'),
@@ -29,10 +30,17 @@ const registerSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
 
+interface AllowedDomainsInfo {
+  domains: string[];
+  isOpen: boolean;
+  message: string;
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const { login, register, error, clearError } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [allowedDomains, setAllowedDomains] = useState<AllowedDomainsInfo | null>(null);
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -52,6 +60,22 @@ export function LoginPage() {
     },
   });
 
+  // Fetch allowed domains on component mount
+  useEffect(() => {
+    const fetchAllowedDomains = async () => {
+      try {
+        const response = await api.get('/auth/allowed-domains');
+        if (response.ok) {
+          const data = await response.json() as AllowedDomainsInfo;
+          setAllowedDomains(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch allowed domains:', error);
+      }
+    };
+    fetchAllowedDomains();
+  }, []);
+
   const onLogin = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
@@ -65,6 +89,26 @@ export function LoginPage() {
   };
 
   const onRegister = async (data: RegisterFormData) => {
+    // Client-side domain validation
+    if (allowedDomains && !allowedDomains.isOpen) {
+      const emailDomain = data.email.toLowerCase().split('@')[1];
+      const isAllowed = allowedDomains.domains.some(domain => {
+        if (domain.startsWith('*.')) {
+          const baseDomain = domain.substring(2);
+          return emailDomain === baseDomain || emailDomain.endsWith('.' + baseDomain);
+        }
+        return emailDomain === domain.toLowerCase();
+      });
+
+      if (!isAllowed) {
+        registerForm.setError('email', {
+          type: 'manual',
+          message: allowedDomains.message
+        });
+        return;
+      }
+    }
+
     setIsLoading(true);
     try {
       await register(data.username, data.email, data.password);
@@ -150,7 +194,11 @@ export function LoginPage() {
               <CardHeader>
                 <CardTitle>Create an account</CardTitle>
                 <CardDescription>
-                  Get started with WorkflowHub today
+                  {allowedDomains && !allowedDomains.isOpen ? (
+                    <span className="text-amber-600">{allowedDomains.message}</span>
+                  ) : (
+                    'Get started with WorkflowHub today'
+                  )}
                 </CardDescription>
               </CardHeader>
               <form onSubmit={registerForm.handleSubmit(onRegister)}>

@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
-import { serveStatic } from 'hono/cloudflare-workers';
 import type { Env } from './types';
 
 // Import routes
@@ -14,11 +13,12 @@ import actionsRoutes from './routes/actions';
 import settingsRoutes from './routes/settings';
 import agentsRoutes from './routes/agents';
 
-// @ts-ignore
-import manifestJSON from '__STATIC_CONTENT_MANIFEST';
-const assetManifest = JSON.parse(manifestJSON);
+// Extend Env to include ASSETS binding
+interface ExtendedEnv extends Env {
+  ASSETS: Fetcher;
+}
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: ExtendedEnv }>();
 
 // Global middleware
 app.use('*', cors({
@@ -60,24 +60,19 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 404 handler
-app.notFound((c) => {
-  return c.json({ error: 'Not found' }, 404);
-});
-
-// Error handler
-app.onError((err, c) => {
-  console.error('Error:', err);
-  return c.json({ error: 'Internal server error' }, 500);
-});
-
-// Serve static files for all non-API routes
-app.get('/*', serveStatic({ root: './', manifest: assetManifest }));
-
-// For client-side routing, serve index.html for any route that doesn't match a file
-app.get('/*', serveStatic({ 
-  path: './index.html',
-  manifest: assetManifest 
-}));
-
-export default app;
+// Export the worker
+export default {
+  async fetch(request: Request, env: ExtendedEnv, ctx: ExecutionContext): Promise<Response> {
+    const url = new URL(request.url);
+    
+    // Handle API routes with Hono
+    if (url.pathname.startsWith('/api')) {
+      return app.fetch(request, env, ctx);
+    }
+    
+    // For all other routes, serve static assets
+    // The not_found_handling = "single-page-application" in wrangler.toml
+    // will automatically serve index.html for navigation requests
+    return env.ASSETS.fetch(request);
+  },
+};

@@ -1,20 +1,22 @@
 name = "workflowhub"
-main = "src/worker/index.ts"
+main = "src/worker/simple.ts"
 compatibility_date = "2024-12-20"
 compatibility_flags = ["nodejs_compat"]
 account_id = "0460574641fdbb98159c98ebf593e2bd"
 
-# Static assets
-[site]
-bucket = "./dist"
+# Static assets - New configuration
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
 
-# D1 Database
+# D1 Database (existing)
 [[d1_databases]]
 binding = "DB"
 database_name = "workflowhub"
 database_id = "b8a61769-5479-4b7d-acbb-904159de6d36"
 
-# R2 Storage
+# R2 Storage (existing)
 [[r2_buckets]]
 binding = "STORAGE"
 bucket_name = "workflowhub-files"
@@ -22,4 +24,11 @@ bucket_name = "workflowhub-files"
 # Environment variables
 [vars]
 JWT_SECRET = "change-this-in-production"
-CORS_ORIGIN = "https://workflowhub.yourdomain.com"
+CORS_ORIGIN = "*"
+# Email domain restrictions for registration
+# Examples:
+# - Single domain: "company.com"
+# - Multiple domains: "company.com,partner.org,client.net"
+# - Subdomain support: "*.company.com"
+# - Open registration: "" or "*"
+ALLOWED_EMAIL_DOMAINS = "*"

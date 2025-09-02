@@ -20,79 +20,83 @@ interface AuthState {
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: localStorage.getItem('token'),
-  isLoading: false,
-  error: null,
+export const useAuthStore = create<AuthState>((set) => {
+  const storedToken = localStorage.getItem('token');
   
-  login: async (username: string, password: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await authApi.login(username, password);
-      localStorage.setItem('token', response.token);
-      set({
-        user: response.user,
-        token: response.token,
-        isLoading: false,
-      });
-    } catch (error: any) {
-      set({
-        error: error.message || 'Login failed',
-        isLoading: false,
-      });
-      throw error;
-    }
-  },
-  
-  register: async (username: string, email: string, password: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await authApi.register(username, email, password);
-      localStorage.setItem('token', response.token);
-      set({
-        user: response.user,
-        token: response.token,
-        isLoading: false,
-      });
-    } catch (error: any) {
-      set({
-        error: error.message || 'Registration failed',
-        isLoading: false,
-      });
-      throw error;
-    }
-  },
-  
-  logout: () => {
-    localStorage.removeItem('token');
-    set({ user: null, token: null, error: null });
-  },
-  
-  verifyToken: async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      set({ user: null, token: null });
-      return;
-    }
+  return {
+    user: null,
+    token: storedToken,
+    isLoading: !!storedToken, // Set loading to true if token exists
+    error: null,
     
-    set({ isLoading: true });
-    try {
-      const response = await authApi.verify();
-      set({
-        user: response.user,
-        token,
-        isLoading: false,
-      });
-    } catch {
+    login: async (username: string, password: string) => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await authApi.login(username, password);
+        localStorage.setItem('token', response.token);
+        set({
+          user: response.user,
+          token: response.token,
+          isLoading: false,
+        });
+      } catch (error: any) {
+        set({
+          error: error.message || 'Login failed',
+          isLoading: false,
+        });
+        throw error;
+      }
+    },
+    
+    register: async (username: string, email: string, password: string) => {
+      set({ isLoading: true, error: null });
+      try {
+        const response = await authApi.register(username, email, password);
+        localStorage.setItem('token', response.token);
+        set({
+          user: response.user,
+          token: response.token,
+          isLoading: false,
+        });
+      } catch (error: any) {
+        set({
+          error: error.message || 'Registration failed',
+          isLoading: false,
+        });
+        throw error;
+      }
+    },
+    
+    logout: () => {
       localStorage.removeItem('token');
-      set({
-        user: null,
-        token: null,
-        isLoading: false,
-      });
-    }
-  },
+      set({ user: null, token: null, error: null });
+    },
+    
+    verifyToken: async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        set({ user: null, token: null, isLoading: false });
+        return;
+      }
+      
+      set({ isLoading: true });
+      try {
+        const response = await authApi.verify();
+        set({
+          user: response.user,
+          token,
+          isLoading: false,
+        });
+      } catch {
+        localStorage.removeItem('token');
+        set({
+          user: null,
+          token: null,
+          isLoading: false,
+        });
+      }
+    },
   
-  clearError: () => set({ error: null }),
-}));
+    clearError: () => set({ error: null }),
+  };
+});

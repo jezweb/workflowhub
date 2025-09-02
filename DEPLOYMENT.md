@@ -43,7 +43,7 @@ CLOUDFLARE_ACCOUNT_ID=your_account_id
 
 # Authentication
 JWT_SECRET=generate_random_32_char_string
-AUTH_SALT_ROUNDS=10
+ALLOWED_EMAIL_DOMAINS=*  # Use "*" for open registration, or comma-separated domains
 
 # n8n Integration
 DEFAULT_WEBHOOK_URL=https://your-n8n.com/webhook/xxx
@@ -120,6 +120,9 @@ npm run preview
 ```bash
 # Set JWT secret
 wrangler secret put JWT_SECRET
+
+# Set allowed email domains (use * for open registration)
+wrangler secret put ALLOWED_EMAIL_DOMAINS
 
 # Set other secrets as needed
 wrangler secret put DEFAULT_WEBHOOK_URL

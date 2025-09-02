@@ -3,6 +3,7 @@ export interface Env {
   STORAGE: R2Bucket;
   JWT_SECRET: string;
   CORS_ORIGIN: string;
+  ALLOWED_EMAIL_DOMAINS: string;
 }
 
 export interface User {

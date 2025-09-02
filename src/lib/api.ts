@@ -231,8 +231,8 @@ export const settingsApi = {
 };
 
 // Convenience default export with all APIs
-const api = {
-  get: (url: string) => apiRequest(url),
+export const api = {
+  get: (url: string) => fetch(`${API_BASE_URL}${url}`),
   post: (url: string, data?: any) => apiRequest(url, {
     method: 'POST',
     body: data ? JSON.stringify(data) : undefined,
