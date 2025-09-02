@@ -99,10 +99,6 @@ cd workflowhub
 # Install dependencies
 npm install
 
-# Configure environment
-cp .env.example .env.local
-# Edit .env.local with your values
-
 # Setup Cloudflare resources
 wrangler d1 create workflowhub
 wrangler r2 bucket create workflowhub-files
@@ -110,8 +106,14 @@ wrangler r2 bucket create workflowhub-files
 # Run migrations
 wrangler d1 migrations apply workflowhub --local
 
+# Configure email domain restrictions (optional)
+./configure-email-domains.sh
+
 # Start development server
 npm run dev
+
+# Deploy to production
+wrangler deploy
 ```
 
 Visit http://localhost:5173 to see the application
@@ -191,13 +193,26 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for complete API documentation.
 
 ## Configuration
 
+### Email Domain Restrictions
+
+Control who can register with the interactive configuration script:
+
+```bash
+./configure-email-domains.sh
+```
+
+This script allows you to:
+- Set open registration (anyone can register)
+- Restrict to single or multiple domains
+- Configure subdomain wildcards (*.company.com)
+- Apply settings to local development and/or production
+
 ### Environment Variables
 
 ```env
 # Required
 CLOUDFLARE_ACCOUNT_ID=your_account_id
 JWT_SECRET=your_secret_key
-DEFAULT_WEBHOOK_URL=https://n8n.example.com/webhook/xxx
 
 # Registration Control
 ALLOWED_EMAIL_DOMAINS=*  # Use "*" for open registration
@@ -207,6 +222,7 @@ ALLOWED_EMAIL_DOMAINS=*  # Use "*" for open registration
 # ALLOWED_EMAIL_DOMAINS=*.company.com  # Subdomain support
 
 # Optional
+DEFAULT_WEBHOOK_URL=https://n8n.example.com/webhook/xxx
 SENTRY_DSN=your_sentry_dsn
 DEBUG=false
 ```

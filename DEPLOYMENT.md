@@ -52,7 +52,20 @@ DEFAULT_WEBHOOK_URL=https://your-n8n.com/webhook/xxx
 SENTRY_DSN=your_sentry_dsn
 ```
 
-### 4. Setup Cloudflare Resources
+### 4. Configure Email Domain Restrictions
+
+Use the interactive configuration script:
+```bash
+./configure-email-domains.sh
+```
+
+Or manually set in wrangler.toml:
+```toml
+[vars]
+ALLOWED_EMAIL_DOMAINS = "*"  # or "company.com,partner.org"
+```
+
+### 5. Setup Cloudflare Resources
 
 #### Create D1 Database
 ```bash

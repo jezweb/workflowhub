@@ -5,6 +5,24 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2025-09-02
+
+### Added
+- **Interactive Configuration Script**: `configure-email-domains.sh` for easy domain management
+  - Interactive menu system with colored output
+  - Domain validation and preview before applying
+  - Support for local and/or production configuration
+  - Automatic backup of wrangler.toml
+
+### Fixed
+- TypeScript errors in chat and agent components
+- Fixed api.get() Response object handling
+- Added proper JSON parsing with type annotations
+
+### Changed
+- Deployment now uses `wrangler deploy` instead of Pages deployment
+- Updated documentation with configuration script usage
+
 ## [2.0.2] - 2025-09-02
 
 ### Added

@@ -292,12 +292,13 @@ POST   /api/dashboard/layout  - Save layout
 ## Security Architecture
 
 ### Authentication Flow
-1. User logs in with username/password
-2. Password verified against bcrypt hash
-3. JWT token generated with user ID and role
-4. Token stored in httpOnly cookie
-5. All API requests validate JWT
-6. Token refreshed before expiration
+1. User registers with email (domain validation applied)
+2. User logs in with username/password
+3. Password verified against bcrypt hash
+4. JWT token generated with user ID and email
+5. Token stored in localStorage
+6. All API requests include Bearer token
+7. Token valid for 7 days
 
 ### Authorization Levels
 - **Public** - No auth required (public forms, login)
