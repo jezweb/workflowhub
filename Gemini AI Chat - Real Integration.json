@@ -1,0 +1,254 @@
+{
+  "name": "Gemini AI Chat - Real Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "action/gemini-chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        256,
+        304
+      ],
+      "webhookId": "f05ec870-f1c7-4f24-8a66-dd5147b0185b"
+    },
+    {
+      "parameters": {
+        "options": {
+          "maxOutputTokens": 2048,
+          "temperature": 0.7
+        }
+      },
+      "id": "gemini",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        304,
+        528
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "yMo6JOxOxBswKf4b",
+          "name": "Google Gemini(PaLM) Api account 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.question }}",
+        "options": {
+          "returnIntermediateSteps": false
+        }
+      },
+      "id": "agent",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [
+        416,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        912,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-json-parser.jsonParser",
+      "typeVersion": 1,
+      "position": [
+        752,
+        304
+      ],
+      "id": "cc509cf7-5876-4332-b8a5-bab7daf6f2ce",
+      "name": "JSON Parser"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://australian-postcodes.fastmcp.app/mcp",
+        "serverTransport": "httpStreamable",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        560
+      ],
+      "id": "bcec886f-64b5-4c36-a3ff-c4f0f63bdac6",
+      "name": "Australian Suburbs and Postcodes"
+    },
+    {
+      "parameters": {
+        "resource": "memory",
+        "databaseId": "12d412a1-7bfe-449d-aa0a-142078e526c4",
+        "operation": "searchMessages",
+        "searchQuery": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Search_Query', `search string`, 'string') }}",
+        "searchSessionId": "=",
+        "enableFuzzySearch": ""
+      },
+      "type": "n8n-nodes-cloudflare-d1.cloudflareD1Tool",
+      "typeVersion": 2,
+      "position": [
+        720,
+        688
+      ],
+      "id": "64408f9c-d15d-4441-878d-e2433890e9db",
+      "name": "Search Previous Chat Messages",
+      "credentials": {
+        "cloudflareD1Api": {
+          "id": "ds4RY6U8QqjOXyyD",
+          "name": "Cloudflare D1 Fairwork"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "databaseId": "12d412a1-7bfe-449d-aa0a-142078e526c4",
+        "maxMessages": 150,
+        "expirationDays": 365
+      },
+      "type": "n8n-nodes-cloudflare-d1.cloudflareD1ChatMemory",
+      "typeVersion": 1,
+      "position": [
+        512,
+        560
+      ],
+      "id": "16f12677-a944-4346-8797-e591ab0b4329",
+      "name": "Cloudflare D1 Chat Memory",
+      "credentials": {
+        "cloudflareD1Api": {
+          "id": "ds4RY6U8QqjOXyyD",
+          "name": "Cloudflare D1 Fairwork"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "JSON Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "main": [
+        []
+      ],
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "JSON Parser": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Australian Suburbs and Postcodes": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cloudflare D1 Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Previous Chat Messages": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveExecutionProgress": true
+  },
+  "versionId": "7a884cf1-d41b-4d26-a1b4-d19b97fdce0a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3612a0c89f35a354ddd1216385240db51b4635fde7cae2a0d5004be915b832f3"
+  },
+  "id": "0ziupGMpExPEhtJD",
+  "tags": []
+}

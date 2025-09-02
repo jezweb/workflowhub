@@ -93,7 +93,16 @@ Complete rewrite of WorkflowHub with simplified architecture - **MVP WITH FORMS,
 - ✅ Fixed all TypeScript errors
 
 ## Current Work 🚧
-None - MVP with forms, actions, files, and database viewer is complete and functional!
+
+### Agent & Chat System with n8n Integration
+Planning and designing a comprehensive AI chat system where:
+- n8n workflows act as configurable AI agents
+- n8n manages conversation memory via D1 Chat Memory nodes
+- WorkflowHub provides UI and agent orchestration
+- Files can be passed to agents for processing
+- Multiple agents with different personalities/capabilities from single n8n workflow
+
+See `/docs/AGENT_CHAT_PLAN.md` for detailed implementation plan.
 
 ## How to Use
 
@@ -138,14 +147,34 @@ None - MVP with forms, actions, files, and database viewer is complete and funct
 8. View total row counts for each table
 
 ## Next Steps 📋
-1. Add drag-and-drop field reordering for forms
-2. ~~Implement file upload to R2~~ ✅
-3. Add webhook integrations for form submissions
-4. Implement nested chat structure with AI
-5. ~~Create action button configuration~~ ✅
-6. ~~Add database viewer~~ ✅ (inline editing deferred)
-7. Future file enhancements (compress/convert for 4MB limit)
-8. Deploy to production
+
+### Immediate: Agent & Chat System
+1. **Phase 1: Agent Management**
+   - Create agent database schema
+   - Build agent CRUD API endpoints
+   - Create agent management UI (list, create, edit, test)
+   - Add default agent templates
+   
+2. **Phase 2: Chat Integration**
+   - Update conversations table (minimal, n8n owns history)
+   - Implement chat API endpoints (create, send, fetch history from n8n)
+   - Build chat UI components
+   - Connect to n8n webhooks
+   
+3. **Phase 3: File Support**
+   - Add file attachment to chat messages
+   - Base64 encoding for small files
+   - URL generation for large files
+   - Pass to n8n for processing
+
+### Future Enhancements
+- Add drag-and-drop field reordering for forms
+- Add webhook integrations for form submissions
+- Streaming chat responses (SSE from n8n)
+- Agent marketplace/sharing
+- Conversation collections/folders
+- Future file enhancements (compress/convert for 4MB limit)
+- Deploy to production
 
 ## Technical Stack
 - **Frontend**: React 19, TypeScript 5.8, shadcn/ui, Tailwind CSS, Zustand, React Hook Form + Zod
@@ -158,14 +187,20 @@ None - MVP with forms, actions, files, and database viewer is complete and funct
 3. **JSON Fields** - Store form fields and settings as JSON
 4. **Nested Chats** - Parent-child conversation structure
 5. **Configurable Actions** - HTTP method and payload templates
+6. **n8n Owns Chat Memory** - WorkflowHub only tracks metadata, n8n D1 Memory stores messages
+7. **Agent Configuration** - Pass config to n8n for dynamic behavior from single workflow
+8. **File Handling** - Base64 for <1MB, R2 URLs for larger files
+9. **No Streaming Initially** - Simple request/response to start
+10. **Dual Webhooks** - One for chat, optional second for history retrieval
 
 ## Database Schema Summary
 - `users` - Basic auth with username/email/password
 - `forms` - Form definitions with JSON fields
 - `form_submissions` - Submitted form data
 - `actions` - Webhook configurations
-- `conversations` - Chat threads with nesting
-- `messages` - Chat messages
+- `agents` - AI agent configurations with webhooks (NEW)
+- `conversations` - Minimal tracking, n8n owns history (UPDATED)
+- `messages` - Not used, n8n stores messages (DEPRECATED)
 - `files` - File metadata (R2 storage)
 - `settings` - Key-value user settings
 
