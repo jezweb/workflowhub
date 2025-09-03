@@ -530,8 +530,7 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                     COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].text
                   } ${
                     settings.appearanceSettings?.buttonFullWidth ? 'w-full' : ''
-                  }`}
-                  disabled
+                  } pointer-events-none`}
                 >
                   <span className="mr-2">{settings.appearanceSettings?.buttonIcon || '📝'}</span>
                   {settings.submitButtonText || 'Submit'}

@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { FormField, FormSettings } from '@/types/form';
+import { COLOR_THEMES } from '@/lib/appearance';
 
 interface FormPreviewProps {
   name: string;
@@ -134,6 +135,41 @@ export function FormPreview({ name, description, fields, settings }: FormPreview
       case 'file':
         return <Input {...baseProps} type="file" />;
 
+      case 'heading':
+        const HeadingTag = field.headingLevel || 'h3';
+        return (
+          <HeadingTag className={`font-bold ${
+            field.headingLevel === 'h1' ? 'text-3xl' :
+            field.headingLevel === 'h2' ? 'text-2xl' :
+            field.headingLevel === 'h3' ? 'text-xl' :
+            field.headingLevel === 'h4' ? 'text-lg' :
+            field.headingLevel === 'h5' ? 'text-base' :
+            'text-sm'
+          }`}>
+            {field.label}
+          </HeadingTag>
+        );
+        
+      case 'separator':
+        return <hr className="border-t border-gray-300 my-2" />;
+        
+      case 'html':
+        return (
+          <div 
+            dangerouslySetInnerHTML={{ __html: field.htmlContent || '' }}
+            className="prose prose-sm max-w-none"
+          />
+        );
+        
+      case 'hidden':
+        return (
+          <input
+            type="hidden"
+            value={field.defaultValue || ''}
+            name={field.name}
+          />
+        );
+
       default:
         return <Input {...baseProps} />;
     }
@@ -147,43 +183,78 @@ export function FormPreview({ name, description, fields, settings }: FormPreview
     );
   }
 
-  return (
-    <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-      {name && <h2 className="text-xl font-semibold">{name}</h2>}
-      {description && <p className="text-gray-600">{description}</p>}
+  // Check if field should display a label
+  const shouldShowLabel = (field: FormField) => {
+    return !['heading', 'separator', 'html', 'hidden'].includes(field.type) && 
+           (field.type !== 'checkbox' || !field.options || field.options.length > 1);
+  };
 
-      <div className="grid grid-cols-12 gap-4">
-        {fields.map((field) => (
-          <div key={field.id} className={getWidthClass(field.width)}>
-            {field.type !== 'checkbox' || !field.options || field.options.length > 1 ? (
-              <div className="space-y-2">
-                <Label htmlFor={field.name}>
-                  {field.label}
-                  {field.required && <span className="text-red-500 ml-1">*</span>}
-                </Label>
-                {renderField(field)}
-                {field.validation?.message && (
-                  <p className="text-xs text-gray-500">{field.validation.message}</p>
+  return (
+    <div className="form-preview-container">
+      {/* Custom CSS if configured */}
+      {settings.appearanceSettings?.customCss && (
+        <style dangerouslySetInnerHTML={{ __html: settings.appearanceSettings.customCss }} />
+      )}
+      
+      <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+        {name && <h2 className="text-xl font-semibold">{name}</h2>}
+        {description && <p className="text-gray-600">{description}</p>}
+
+        <div className="grid grid-cols-12 gap-4">
+          {fields.map((field) => {
+            // Skip hidden fields from visual display
+            if (field.type === 'hidden') {
+              return renderField(field);
+            }
+            
+            return (
+              <div key={field.id} className={getWidthClass(field.width)}>
+                {shouldShowLabel(field) ? (
+                  <div className="space-y-2">
+                    <Label htmlFor={field.name}>
+                      {field.label}
+                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {renderField(field)}
+                    {field.validation?.message && (
+                      <p className="text-xs text-gray-500">{field.validation.message}</p>
+                    )}
+                  </div>
+                ) : (
+                  renderField(field)
                 )}
               </div>
-            ) : (
-              renderField(field)
-            )}
-          </div>
-        ))}
-      </div>
-
-      <div className="pt-4">
-        <Button type="submit" className="w-full sm:w-auto">
-          {settings.submitButtonText || 'Submit'}
-        </Button>
-      </div>
-
-      {settings.successMessage && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-green-800">{settings.successMessage}</p>
+            );
+          })}
         </div>
-      )}
-    </form>
+
+        <div className="pt-4">
+          <Button 
+            type="submit" 
+            className={`${
+              settings.appearanceSettings?.buttonStyle === 'gradient' && 
+              COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
+                ? COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
+                : COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate']?.background || ''
+            } ${
+              COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate']?.text || ''
+            } ${
+              settings.appearanceSettings?.buttonFullWidth ? 'w-full' : 'w-full sm:w-auto'
+            }`}
+          >
+            {settings.appearanceSettings?.buttonIcon && (
+              <span className="mr-2">{settings.appearanceSettings.buttonIcon}</span>
+            )}
+            {settings.submitButtonText || 'Submit'}
+          </Button>
+        </div>
+
+        {settings.successMessage && (
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-green-800">{settings.successMessage}</p>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }
