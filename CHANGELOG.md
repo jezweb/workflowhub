@@ -49,6 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Secure Turnstile verification flow
 - Optimized webhook response handling
 
+### Deployment
+- Successfully deployed to production at https://workflowhub.webfonts.workers.dev
+- Applied migration 0007_forms_missing_fields.sql
+- All new features are live and operational
+
 ## [2.1.0] - 2025-09-03
 
 ### Added
