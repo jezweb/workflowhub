@@ -11,7 +11,8 @@ export function ProtectedRoute() {
     }
   }, [token, user, verifyToken]);
 
-  if (isLoading) {
+  // If we're loading or we have a token but no user yet (refresh case), show loading
+  if (isLoading || (token && !user)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -22,7 +23,8 @@ export function ProtectedRoute() {
     );
   }
 
-  if (!token || !user) {
+  // Only redirect if there's no token (logged out) or verification failed (no user after loading)
+  if (!token) {
     return <Navigate to="/login" replace />;
   }
 
