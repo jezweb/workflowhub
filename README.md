@@ -34,14 +34,22 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 - Searchable message history
 
 ### 🎯 Action Buttons
+- **One-click n8n workflow triggers** - no user input required at execution
 - Full HTTP method support (GET, POST, PUT, DELETE, PATCH)
 - Custom headers configuration
-- JSON payload templates with variable substitution
-- Dynamic data injection ({{user.id}}, {{timestamp}}, etc.)
-- Three response modes (modal, toast, page)
-- Direct webhook execution with response handling
-- Test mode with request preview
+- JSON payload templates with automatic variable substitution:
+  - User data: `{{user.id}}`, `{{user.username}}`, `{{user.email}}`
+  - Time variables: `{{timestamp}}`, `{{date}}`, `{{datetime}}`
+  - Random values: `{{random}}`
+- **Visual customization:**
+  - Emoji icons for buttons
+  - 9 color themes with gradient options (ocean, forest, sunset, berry, rose, slate, emerald, amber, indigo)
+  - Solid or gradient button styles
+- Response handling modes (silent, toast, modal, refresh)
+- Test mode with request preview (shows payload without executing)
+- Direct webhook execution with non-blocking async processing
 - URL copy for external integration
+- Dashboard quick actions for instant access
 
 ### 📊 Database Viewer
 - Interactive data grid

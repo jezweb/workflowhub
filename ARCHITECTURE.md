@@ -440,6 +440,23 @@ worker/
 6. Client displays streaming response
 7. Final response stored in D1
 
+### Action Execution Flow
+1. User clicks action button → No input required
+2. Client calls `/api/actions/:id/execute`
+3. Worker retrieves action config from D1
+4. Variable substitution performed server-side:
+   - User data (id, username, email)
+   - Timestamps (unix, ISO date/time)
+   - Random values
+5. Worker sends pre-configured webhook request
+6. Non-blocking async execution
+7. Response handling based on action config:
+   - Silent: No user feedback
+   - Toast: Brief notification
+   - Modal: Display response
+   - Refresh: Reload page
+8. User continues working immediately
+
 ### File Upload Flow
 1. User drops file → Client validates
 2. Multipart upload to Worker
