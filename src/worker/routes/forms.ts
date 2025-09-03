@@ -16,7 +16,14 @@ app.get('/', async (c) => {
     .bind(userId)
     .all();
   
-  return c.json({ success: true, forms: forms.results });
+  // Parse JSON fields for each form
+  const parsedForms = forms.results.map((form: any) => ({
+    ...form,
+    fields: typeof form.fields === 'string' ? JSON.parse(form.fields) : form.fields,
+    settings: typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings
+  }));
+  
+  return c.json({ success: true, forms: parsedForms });
 });
 
 // Get single form
@@ -36,7 +43,14 @@ app.get('/:id', async (c) => {
     return c.json({ error: 'Form not found' }, 404);
   }
   
-  return c.json({ success: true, form });
+  // Parse JSON fields
+  const parsedForm = {
+    ...form,
+    fields: typeof form.fields === 'string' ? JSON.parse(form.fields) : form.fields,
+    settings: typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings
+  };
+  
+  return c.json({ success: true, form: parsedForm });
 });
 
 // Create form

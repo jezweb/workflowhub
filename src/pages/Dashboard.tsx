@@ -1,13 +1,34 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, FolderOpen, Database, MessageSquare, Zap, Activity } from 'lucide-react';
+import { actionsApi } from '@/lib/api';
+import { ActionButton } from '@/components/actions/ActionButton';
+import type { Action } from '@/types/action';
 
 export function DashboardPage() {
+  const [actions, setActions] = useState<Action[]>([]);
+  const [actionsCount, setActionsCount] = useState(0);
+
+  useEffect(() => {
+    loadActions();
+  }, []);
+
+  const loadActions = async () => {
+    try {
+      const response = await actionsApi.list();
+      setActions(response.actions || []);
+      setActionsCount(response.actions?.length || 0);
+    } catch (error) {
+      console.error('Failed to load actions:', error);
+    }
+  };
+
   const stats = [
     { name: 'Forms', value: '0', icon: FileText, color: 'text-blue-600' },
     { name: 'Files', value: '0', icon: FolderOpen, color: 'text-green-600' },
     { name: 'Tables', value: '8', icon: Database, color: 'text-purple-600' },
     { name: 'Conversations', value: '0', icon: MessageSquare, color: 'text-orange-600' },
-    { name: 'Actions', value: '0', icon: Zap, color: 'text-red-600' },
+    { name: 'Actions', value: actionsCount.toString(), icon: Zap, color: 'text-red-600' },
     { name: 'Active', value: 'Yes', icon: Activity, color: 'text-emerald-600' },
   ];
 
@@ -37,11 +58,33 @@ export function DashboardPage() {
         })}
       </div>
 
+      {/* Actions Section */}
+      {actions.length > 0 && (
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+            <CardDescription>Click to execute your configured actions</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-3">
+              {actions.map((action) => (
+                <ActionButton 
+                  key={action.id}
+                  action={action}
+                  size="default"
+                  onSuccess={loadActions}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and shortcuts</CardDescription>
+            <CardTitle>Common Tasks</CardTitle>
+            <CardDescription>Quick links to frequent operations</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">

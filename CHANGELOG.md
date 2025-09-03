@@ -5,6 +5,31 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-09-03
+
+### Added
+- Visual customization for action buttons
+  - Emoji icon support
+  - 9 color themes with gradients (ocean, forest, sunset, berry, rose, slate, emerald, amber, indigo)
+  - Solid and gradient button styles
+- Automatic variable substitution for actions
+  - User data ({{user.id}}, {{user.username}}, {{user.email}})
+  - Time variables ({{timestamp}}, {{date}}, {{datetime}})
+  - Random values ({{random}})
+- Test preview for actions before execution
+- Actions display on dashboard for quick access
+- Flexible response handling (silent, toast, modal, refresh)
+
+### Changed
+- Actions now execute immediately without requiring user input
+- Removed dynamic data dialog - all data pre-configured
+- Actions are now one-click triggers for n8n workflows
+- Improved ActionBuilder with 4-tab interface (Basic, Request, Response, Appearance)
+
+### Fixed
+- JSON parsing issue in action headers and payload display
+- TypeScript compilation errors
+
 ## [2.0.0] - 2025-09-02
 
 ### Added

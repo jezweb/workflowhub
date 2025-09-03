@@ -8,9 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Save, TestTube, Info } from 'lucide-react';
-import type { Action, ActionFormData, HttpMethod, ResponseType } from '@/types/action';
-import { HTTP_METHODS, RESPONSE_TYPES, DEFAULT_HEADERS, PAYLOAD_TEMPLATE_VARIABLES } from '@/types/action';
+import type { Action, ActionFormData, HttpMethod, ResponseType, ColorTheme, ButtonStyle, OnSuccessAction } from '@/types/action';
+import { HTTP_METHODS, RESPONSE_TYPES, DEFAULT_HEADERS, PAYLOAD_TEMPLATE_VARIABLES, COLOR_THEMES } from '@/types/action';
 import { ActionEditor } from './ActionEditor';
+import { actionsApi } from '@/lib/api';
 
 interface ActionBuilderProps {
   action?: Action;
@@ -27,6 +28,10 @@ export function ActionBuilder({ action, onSave, onCancel }: ActionBuilderProps) 
     headers: action?.headers || DEFAULT_HEADERS,
     payload: action?.payload || {},
     response_type: action?.response_type || 'modal',
+    icon: action?.icon || '⚡',
+    color_theme: action?.color_theme || 'slate',
+    button_style: action?.button_style || 'solid',
+    on_success: action?.on_success || 'toast',
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -49,8 +54,34 @@ export function ActionBuilder({ action, onSave, onCancel }: ActionBuilderProps) 
   };
 
   const handleTestAction = async () => {
-    console.log('Testing action with:', formData);
-    // TODO: Implement test execution
+    if (!formData.name || !formData.url) {
+      alert('Please fill in required fields before testing');
+      return;
+    }
+
+    try {
+      // For new actions, we need to save first
+      if (!action) {
+        await onSave(formData);
+        // TODO: Get the ID from result and test
+        alert('Please save the action first before testing');
+        return;
+      }
+
+      // Test existing action
+      const response = await actionsApi.test(action.id);
+      
+      if (response.success) {
+        // Show preview in alert (could be improved to modal)
+        const preview = response.preview;
+        alert(`Test Preview:\n\nURL: ${preview.url}\nMethod: ${preview.method}\nHeaders: ${JSON.stringify(preview.headers, null, 2)}\nPayload: ${JSON.stringify(preview.payload, null, 2)}`);
+      } else {
+        alert('Test failed: ' + (response.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Test failed:', error);
+      alert('Failed to test action');
+    }
   };
 
   const updateFormData = (updates: Partial<ActionFormData>) => {
@@ -77,10 +108,11 @@ export function ActionBuilder({ action, onSave, onCancel }: ActionBuilderProps) 
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
               <TabsTrigger value="request">Request Config</TabsTrigger>
-              <TabsTrigger value="response">Response Handling</TabsTrigger>
+              <TabsTrigger value="response">Response</TabsTrigger>
+              <TabsTrigger value="appearance">Appearance</TabsTrigger>
             </TabsList>
 
             <TabsContent value="basic" className="space-y-4">
@@ -201,6 +233,97 @@ export function ActionBuilder({ action, onSave, onCancel }: ActionBuilderProps) 
                   <li>• <strong>Toast:</strong> Brief notification in corner of screen</li>
                   <li>• <strong>Page:</strong> Redirects to a new page with response data</li>
                 </ul>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="appearance" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="icon">Button Icon</Label>
+                <Input
+                  id="icon"
+                  value={formData.icon}
+                  onChange={(e) => updateFormData({ icon: e.target.value })}
+                  placeholder="Enter an emoji or leave default ⚡"
+                  maxLength={4}
+                />
+                <p className="text-xs text-gray-500">
+                  Use any emoji like 📧, 🚀, 💬, or 🔄
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="color_theme">Color Theme</Label>
+                <Select
+                  value={formData.color_theme}
+                  onValueChange={(value: ColorTheme) => updateFormData({ color_theme: value })}
+                >
+                  <SelectTrigger id="color_theme">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(COLOR_THEMES).map((theme) => {
+                      const colors = COLOR_THEMES[theme as ColorTheme];
+                      return (
+                        <SelectItem key={theme} value={theme}>
+                          <div className="flex items-center gap-2">
+                            <div className={`w-4 h-4 rounded ${colors.background}`} />
+                            <span className="capitalize">{theme}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="button_style">Button Style</Label>
+                <Select
+                  value={formData.button_style}
+                  onValueChange={(value: ButtonStyle) => updateFormData({ button_style: value })}
+                >
+                  <SelectTrigger id="button_style">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="solid">Solid Color</SelectItem>
+                    <SelectItem value="gradient">Gradient</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="on_success">Success Action</Label>
+                <Select
+                  value={formData.on_success}
+                  onValueChange={(value: OnSuccessAction) => updateFormData({ on_success: value })}
+                >
+                  <SelectTrigger id="on_success">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="silent">Silent (no notification)</SelectItem>
+                    <SelectItem value="toast">Toast Notification</SelectItem>
+                    <SelectItem value="modal">Show Modal</SelectItem>
+                    <SelectItem value="refresh">Refresh Page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Button Preview</h4>
+                <div className="flex gap-4">
+                  <Button
+                    className={`${
+                      formData.button_style === 'gradient' && COLOR_THEMES[formData.color_theme || 'slate'].gradient
+                        ? COLOR_THEMES[formData.color_theme || 'slate'].gradient
+                        : COLOR_THEMES[formData.color_theme || 'slate'].background
+                    } ${COLOR_THEMES[formData.color_theme || 'slate'].text}`}
+                  >
+                    <span className="mr-2">{formData.icon || '⚡'}</span>
+                    {formData.name || 'Action Button'}
+                  </Button>
+                </div>
               </div>
             </TabsContent>
           </Tabs>

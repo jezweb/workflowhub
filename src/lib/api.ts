@@ -92,6 +92,8 @@ export const submitForm = formsApi.submit;
 export const actionsApi = {
   list: () => apiRequest('/actions'),
   
+  get: (id: string) => apiRequest(`/actions/${id}`),
+  
   create: (action: any) =>
     apiRequest('/actions', {
       method: 'POST',
@@ -104,10 +106,16 @@ export const actionsApi = {
       body: JSON.stringify(action),
     }),
   
-  execute: (id: string, data?: any) =>
+  execute: (id: string) =>
     apiRequest(`/actions/${id}/execute`, {
       method: 'POST',
-      body: JSON.stringify({ data: data || {} }),
+      body: JSON.stringify({}),
+    }),
+    
+  test: (id: string) =>
+    apiRequest(`/actions/${id}/test`, {
+      method: 'POST',
+      body: JSON.stringify({}),
     }),
   
   delete: (id: string) =>

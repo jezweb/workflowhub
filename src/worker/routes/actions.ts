@@ -12,7 +12,38 @@ app.get('/', async (c) => {
     .bind(userId)
     .all();
   
-  return c.json({ success: true, actions: actions.results });
+  // Parse JSON fields for each action
+  const parsedActions = actions.results.map((action: any) => ({
+    ...action,
+    headers: typeof action.headers === 'string' ? JSON.parse(action.headers) : action.headers,
+    payload: typeof action.payload === 'string' ? JSON.parse(action.payload) : action.payload
+  }));
+  
+  return c.json({ success: true, actions: parsedActions });
+});
+
+// Get single action
+app.get('/:id', async (c) => {
+  const actionId = c.req.param('id');
+  const userId = c.get('jwtPayload').sub;
+  
+  const action = await c.env.DB
+    .prepare('SELECT * FROM actions WHERE id = ? AND created_by = ?')
+    .bind(actionId, userId)
+    .first();
+  
+  if (!action) {
+    return c.json({ error: 'Action not found' }, 404);
+  }
+  
+  // Parse JSON fields
+  const parsedAction = {
+    ...action,
+    headers: typeof action.headers === 'string' ? JSON.parse(action.headers) : action.headers,
+    payload: typeof action.payload === 'string' ? JSON.parse(action.payload) : action.payload
+  };
+  
+  return c.json({ success: true, action: parsedAction });
 });
 
 // Create action
@@ -24,8 +55,11 @@ app.post('/', async (c) => {
   
   await c.env.DB
     .prepare(`
-      INSERT INTO actions (id, name, description, method, url, headers, payload, response_type, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO actions (
+        id, name, description, method, url, headers, payload, response_type,
+        icon, color_theme, button_style, on_success, created_by
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .bind(
       actionId,
@@ -36,6 +70,10 @@ app.post('/', async (c) => {
       JSON.stringify(body.headers || {}),
       JSON.stringify(body.payload || {}),
       body.response_type || 'modal',
+      body.icon || '⚡',
+      body.color_theme || 'slate',
+      body.button_style || 'solid',
+      body.on_success || 'toast',
       userId
     )
     .run();
@@ -52,7 +90,8 @@ app.put('/:id', async (c) => {
   const result = await c.env.DB
     .prepare(`
       UPDATE actions 
-      SET name = ?, description = ?, method = ?, url = ?, headers = ?, payload = ?, response_type = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, description = ?, method = ?, url = ?, headers = ?, payload = ?, response_type = ?,
+          icon = ?, color_theme = ?, button_style = ?, on_success = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND created_by = ?
     `)
     .bind(
@@ -63,6 +102,10 @@ app.put('/:id', async (c) => {
       JSON.stringify(body.headers || {}),
       JSON.stringify(body.payload || {}),
       body.response_type || 'modal',
+      body.icon || '⚡',
+      body.color_theme || 'slate',
+      body.button_style || 'solid',
+      body.on_success || 'toast',
       actionId,
       userId
     )
@@ -75,12 +118,34 @@ app.put('/:id', async (c) => {
   return c.json({ success: true });
 });
 
-// Execute action
+// Helper function to substitute variables in payload
+const substituteVariables = (payload: any, userId: string, username: string, email: string): any => {
+  const now = new Date();
+  const variables: Record<string, string> = {
+    '{{user.id}}': userId,
+    '{{user.username}}': username,
+    '{{user.email}}': email,
+    '{{timestamp}}': Math.floor(now.getTime() / 1000).toString(),
+    '{{date}}': now.toISOString().split('T')[0],
+    '{{datetime}}': now.toISOString(),
+    '{{random}}': Math.random().toString(36).substring(7),
+  };
+
+  // Convert payload to string, replace variables, then parse back
+  let payloadStr = JSON.stringify(payload);
+  Object.entries(variables).forEach(([key, value]) => {
+    payloadStr = payloadStr.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+  });
+  
+  return JSON.parse(payloadStr);
+};
+
+// Execute action (no dynamic data from user)
 app.post('/:id/execute', async (c) => {
   const actionId = c.req.param('id');
   const userId = c.get('jwtPayload').sub;
-  const body = await c.req.json();
   
+  // Get action details
   const action = await c.env.DB
     .prepare('SELECT * FROM actions WHERE id = ? AND created_by = ?')
     .bind(actionId, userId)
@@ -89,8 +154,23 @@ app.post('/:id/execute', async (c) => {
   if (!action) {
     return c.json({ error: 'Action not found' }, 404);
   }
+
+  // Get user details for variable substitution
+  const user = await c.env.DB
+    .prepare('SELECT username, email FROM users WHERE id = ?')
+    .bind(userId)
+    .first();
   
   try {
+    // Parse and substitute variables in payload
+    const payload = JSON.parse(action.payload as string);
+    const substitutedPayload = substituteVariables(
+      payload, 
+      userId,
+      (user?.username as string) || '',
+      (user?.email as string) || ''
+    );
+
     // Execute webhook
     const response = await fetch(action.url as string, {
       method: action.method as string,
@@ -98,23 +178,75 @@ app.post('/:id/execute', async (c) => {
         'Content-Type': 'application/json',
         ...JSON.parse(action.headers as string),
       },
-      body: action.method !== 'GET' ? JSON.stringify({
-        ...JSON.parse(action.payload as string),
-        ...body.data,
-      }) : undefined,
+      body: action.method !== 'GET' ? JSON.stringify(substitutedPayload) : undefined,
     });
     
     const result = await response.text();
     
     return c.json({
-      success: true,
+      success: response.ok,
       status: response.status,
       data: result,
-      response_type: action.response_type,
+      response_type: action.on_success || action.response_type || 'toast',
     });
   } catch (error) {
     console.error('Action execution error:', error);
     return c.json({ error: 'Action execution failed' }, 500);
+  }
+});
+
+// Test action endpoint
+app.post('/:id/test', async (c) => {
+  const actionId = c.req.param('id');
+  const userId = c.get('jwtPayload').sub;
+  
+  // Get action details
+  const action = await c.env.DB
+    .prepare('SELECT * FROM actions WHERE id = ? AND created_by = ?')
+    .bind(actionId, userId)
+    .first();
+  
+  if (!action) {
+    return c.json({ error: 'Action not found' }, 404);
+  }
+
+  // Get user details for variable substitution
+  const user = await c.env.DB
+    .prepare('SELECT username, email FROM users WHERE id = ?')
+    .bind(userId)
+    .first();
+  
+  try {
+    // Parse and substitute variables in payload
+    const payload = JSON.parse(action.payload as string);
+    const substitutedPayload = substituteVariables(
+      payload, 
+      userId,
+      (user?.username as string) || '',
+      (user?.email as string) || ''
+    );
+
+    // Prepare headers with test mode indicator
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Test-Mode': 'true',
+      ...JSON.parse(action.headers as string),
+    };
+
+    // Return request preview without executing
+    return c.json({
+      success: true,
+      preview: {
+        url: action.url,
+        method: action.method,
+        headers: headers,
+        payload: action.method !== 'GET' ? substitutedPayload : null,
+      },
+      message: 'Test preview generated. Click "Execute" to send the actual request.',
+    });
+  } catch (error) {
+    console.error('Test preview error:', error);
+    return c.json({ error: 'Failed to generate test preview' }, 500);
   }
 });
 

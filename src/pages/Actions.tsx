@@ -1,16 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -18,7 +8,6 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Play,
   Copy,
   MoreVertical,
   Globe,
@@ -41,21 +30,17 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { actionsApi } from '@/lib/api';
-import type { Action, ActionFormData, ActionExecuteResponse } from '@/types/action';
+import type { Action, ActionFormData } from '@/types/action';
 import { ActionBuilder } from '@/components/actions/ActionBuilder';
+import { ActionButton } from '@/components/actions/ActionButton';
 import { HTTP_METHODS } from '@/types/action';
 
 export function ActionsPage() {
   const [actions, setActions] = useState<Action[]>([]);
   const [selectedAction, setSelectedAction] = useState<Action | null>(null);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-  const [isExecuteDialogOpen, setIsExecuteDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
-  const [executeData, setExecuteData] = useState<string>('{}');
-  const [executeResponse, setExecuteResponse] = useState<ActionExecuteResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isExecuting, setIsExecuting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -134,57 +119,6 @@ export function ActionsPage() {
         description: 'Failed to delete action',
         variant: 'destructive',
       });
-    }
-  };
-
-  const handleExecuteAction = (action: Action) => {
-    setSelectedAction(action);
-    setExecuteData('{}');
-    setIsExecuteDialogOpen(true);
-  };
-
-  const executeAction = async () => {
-    if (!selectedAction) return;
-
-    setIsExecuting(true);
-    try {
-      let data = {};
-      try {
-        data = JSON.parse(executeData);
-      } catch {
-        toast({
-          title: 'Error',
-          description: 'Invalid JSON data',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const response = await actionsApi.execute(selectedAction.id, data);
-      setExecuteResponse(response);
-      setIsExecuteDialogOpen(false);
-
-      // Handle response based on type
-      if (response.response_type === 'modal') {
-        setIsResponseDialogOpen(true);
-      } else if (response.response_type === 'toast') {
-        toast({
-          title: 'Action Executed',
-          description: response.data || 'Success',
-        });
-      } else if (response.response_type === 'page') {
-        // TODO: Navigate to new page with response data
-        console.log('Navigate to page with:', response.data);
-      }
-    } catch (error) {
-      console.error('Failed to execute action:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to execute action',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsExecuting(false);
     }
   };
 
@@ -275,10 +209,6 @@ export function ActionsPage() {
                         <Edit2 className="mr-2 h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleExecuteAction(action)}>
-                        <Play className="mr-2 h-4 w-4" />
-                        Execute
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => copyActionUrl(action)}>
                         <Copy className="mr-2 h-4 w-4" />
                         Copy URL
@@ -309,88 +239,17 @@ export function ActionsPage() {
                     <Globe className="h-4 w-4" />
                     <span>Response: {action.response_type}</span>
                   </div>
-                  <Button
-                    variant="outline"
+                  <ActionButton 
+                    action={action}
                     className="w-full"
-                    onClick={() => handleExecuteAction(action)}
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Execute
-                  </Button>
+                    onSuccess={loadActions}
+                  />
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
-
-      {/* Execute Action Dialog */}
-      <Dialog open={isExecuteDialogOpen} onOpenChange={setIsExecuteDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Execute Action: {selectedAction?.name}</DialogTitle>
-            <DialogDescription>
-              Provide any dynamic data needed for this action
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Dynamic Data (JSON)</Label>
-              <Textarea
-                value={executeData}
-                onChange={(e) => setExecuteData(e.target.value)}
-                placeholder='{"key": "value"}'
-                className="font-mono text-sm min-h-[150px]"
-                rows={6}
-              />
-              <p className="text-xs text-gray-500">
-                This data will be merged with the action's payload template
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsExecuteDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={executeAction} disabled={isExecuting}>
-              {isExecuting ? 'Executing...' : 'Execute'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Response Dialog */}
-      <Dialog open={isResponseDialogOpen} onOpenChange={setIsResponseDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Action Response</DialogTitle>
-            <DialogDescription>
-              Response from {selectedAction?.name}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {executeResponse && (
-              <>
-                <div className="flex items-center gap-2">
-                  <Badge variant={executeResponse.success ? 'default' : 'destructive'}>
-                    Status: {executeResponse.status || 'Unknown'}
-                  </Badge>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <pre className="text-sm overflow-auto">
-                    {typeof executeResponse.data === 'string'
-                      ? executeResponse.data
-                      : JSON.stringify(executeResponse.data, null, 2)}
-                  </pre>
-                </div>
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsResponseDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
