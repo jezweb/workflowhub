@@ -8,6 +8,7 @@ account_id = "0460574641fdbb98159c98ebf593e2bd"
 [assets]
 directory = "./dist"
 binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 # D1 Database
 [[d1_databases]]
