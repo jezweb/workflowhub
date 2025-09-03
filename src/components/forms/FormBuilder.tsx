@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Trash2, GripVertical, Eye, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { COLOR_THEMES, ColorTheme, ButtonStyle } from '@/lib/appearance';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -418,147 +419,130 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
           </Card>
         </TabsContent>
 
-        <TabsContent value="appearance" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Button Styling</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="buttonVariant">Button Style</Label>
-                <Select
-                  value={settings.appearanceSettings?.buttonVariant || 'default'}
-                  onValueChange={(value: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link') => 
-                    setSettings({ 
-                      ...settings, 
-                      appearanceSettings: { 
-                        ...settings.appearanceSettings, 
-                        buttonVariant: value 
-                      } 
-                    })
-                  }
-                >
-                  <SelectTrigger id="buttonVariant">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="destructive">Destructive</SelectItem>
-                    <SelectItem value="outline">Outline</SelectItem>
-                    <SelectItem value="secondary">Secondary</SelectItem>
-                    <SelectItem value="ghost">Ghost</SelectItem>
-                    <SelectItem value="link">Link</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="buttonSize">Button Size</Label>
-                <Select
-                  value={settings.appearanceSettings?.buttonSize || 'default'}
-                  onValueChange={(value: 'sm' | 'default' | 'lg') => 
-                    setSettings({ 
-                      ...settings, 
-                      appearanceSettings: { 
-                        ...settings.appearanceSettings, 
-                        buttonSize: value 
-                      } 
-                    })
-                  }
-                >
-                  <SelectTrigger id="buttonSize">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sm">Small</SelectItem>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="lg">Large</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="buttonFullWidth"
-                  checked={settings.appearanceSettings?.buttonFullWidth === true}
-                  onCheckedChange={(checked) => 
-                    setSettings({ 
-                      ...settings, 
-                      appearanceSettings: { 
-                        ...settings.appearanceSettings, 
-                        buttonFullWidth: checked 
-                      } 
-                    })
-                  }
-                />
-                <Label htmlFor="buttonFullWidth">Full width button</Label>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="appearance" className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="buttonIcon">Button Icon</Label>
+              <Input
+                id="buttonIcon"
+                value={settings.appearanceSettings?.buttonIcon || ''}
+                onChange={(e) => 
+                  setSettings({ 
+                    ...settings, 
+                    appearanceSettings: { 
+                      ...settings.appearanceSettings, 
+                      buttonIcon: e.target.value 
+                    } 
+                  })
+                }
+                placeholder="📝"
+                className="max-w-[100px]"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Use any emoji like 📝, 📧, ✉️, or 📋
+              </p>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Theme Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="theme">Theme Mode</Label>
-                <Select
-                  value={settings.appearanceSettings?.theme || 'auto'}
-                  onValueChange={(value: 'light' | 'dark' | 'auto') => 
-                    setSettings({ 
-                      ...settings, 
-                      appearanceSettings: { 
-                        ...settings.appearanceSettings, 
-                        theme: value 
-                      } 
-                    })
-                  }
+            <div>
+              <Label htmlFor="colorTheme">Color Theme</Label>
+              <Select
+                value={settings.appearanceSettings?.colorTheme || 'slate'}
+                onValueChange={(value: ColorTheme) => 
+                  setSettings({ 
+                    ...settings, 
+                    appearanceSettings: { 
+                      ...settings.appearanceSettings, 
+                      colorTheme: value 
+                    } 
+                  })
+                }
+              >
+                <SelectTrigger id="colorTheme">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.keys(COLOR_THEMES).map((theme) => {
+                    const colors = COLOR_THEMES[theme as ColorTheme];
+                    return (
+                      <SelectItem key={theme} value={theme}>
+                        <div className="flex items-center gap-2">
+                          <div className={`w-4 h-4 rounded ${colors.background}`} />
+                          <span className="capitalize">{theme}</span>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="buttonStyle">Button Style</Label>
+              <Select
+                value={settings.appearanceSettings?.buttonStyle || 'solid'}
+                onValueChange={(value: ButtonStyle) => 
+                  setSettings({ 
+                    ...settings, 
+                    appearanceSettings: { 
+                      ...settings.appearanceSettings, 
+                      buttonStyle: value 
+                    } 
+                  })
+                }
+              >
+                <SelectTrigger id="buttonStyle">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="solid">Solid Color</SelectItem>
+                  <SelectItem value="gradient">Gradient</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="buttonFullWidth"
+                checked={settings.appearanceSettings?.buttonFullWidth === true}
+                onCheckedChange={(checked) => 
+                  setSettings({ 
+                    ...settings, 
+                    appearanceSettings: { 
+                      ...settings.appearanceSettings, 
+                      buttonFullWidth: checked 
+                    } 
+                  })
+                }
+              />
+              <Label htmlFor="buttonFullWidth">Full width button</Label>
+            </div>
+
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Button Preview</h4>
+              <div className="flex justify-center">
+                <Button
+                  className={`${
+                    settings.appearanceSettings?.buttonStyle === 'gradient' && 
+                    COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
+                      ? COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
+                      : COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].background
+                  } ${
+                    COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].text
+                  } ${
+                    settings.appearanceSettings?.buttonFullWidth ? 'w-full' : ''
+                  }`}
+                  disabled
                 >
-                  <SelectTrigger id="theme">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="light">Light</SelectItem>
-                    <SelectItem value="dark">Dark</SelectItem>
-                    <SelectItem value="auto">Auto (System)</SelectItem>
-                  </SelectContent>
-                </Select>
+                  <span className="mr-2">{settings.appearanceSettings?.buttonIcon || '📝'}</span>
+                  {settings.submitButtonText || 'Submit'}
+                </Button>
               </div>
-              <div>
-                <Label htmlFor="primaryColor">Primary Color</Label>
-                <Input
-                  id="primaryColor"
-                  type="color"
-                  value={settings.appearanceSettings?.primaryColor || '#3b82f6'}
-                  onChange={(e) => 
-                    setSettings({ 
-                      ...settings, 
-                      appearanceSettings: { 
-                        ...settings.appearanceSettings, 
-                        primaryColor: e.target.value 
-                      } 
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="backgroundColor">Background Color</Label>
-                <Input
-                  id="backgroundColor"
-                  type="color"
-                  value={settings.appearanceSettings?.backgroundColor || '#ffffff'}
-                  onChange={(e) => 
-                    setSettings({ 
-                      ...settings, 
-                      appearanceSettings: { 
-                        ...settings.appearanceSettings, 
-                        backgroundColor: e.target.value 
-                      } 
-                    })
-                  }
-                />
-              </div>
-              <div>
-                <Label htmlFor="customCss">Custom CSS (Advanced)</Label>
+            </div>
+
+            <details className="border rounded-lg p-4">
+              <summary className="cursor-pointer font-medium">Advanced Settings</summary>
+              <div className="mt-4">
+                <Label htmlFor="customCss">Custom CSS (Optional)</Label>
                 <Textarea
                   id="customCss"
                   value={settings.appearanceSettings?.customCss || ''}
@@ -573,11 +557,11 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                   }
                   placeholder=".form-container { }\n.submit-button { }"
                   rows={4}
-                  className="font-mono text-sm"
+                  className="font-mono text-sm mt-2"
                 />
               </div>
-            </CardContent>
-          </Card>
+            </details>
+          </div>
         </TabsContent>
       </Tabs>
 

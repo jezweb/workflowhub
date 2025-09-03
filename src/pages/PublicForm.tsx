@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
+import { COLOR_THEMES } from '@/lib/appearance';
 import { Loader2 } from 'lucide-react';
 import type { Form, FormField } from '@/types/form';
 
@@ -542,6 +543,11 @@ export function PublicFormPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
+      {/* Custom CSS if configured */}
+      {form.settings?.appearanceSettings?.customCss && (
+        <style dangerouslySetInnerHTML={{ __html: form.settings.appearanceSettings.customCss }} />
+      )}
+      
       <div className="max-w-4xl mx-auto">
         <Card>
           <CardHeader>
@@ -564,8 +570,24 @@ export function PublicFormPage() {
                 <div ref={turnstileRef} className="mb-4"></div>
               )}
               
-              <Button type="submit" disabled={submitting} className="w-full md:w-auto">
+              <Button 
+                type="submit" 
+                disabled={submitting} 
+                className={`${
+                  form.settings?.appearanceSettings?.buttonStyle === 'gradient' && 
+                  COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate'].gradient
+                    ? COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate'].gradient
+                    : COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate']?.background || 'bg-primary'
+                } ${
+                  COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate']?.text || 'text-primary-foreground'
+                } ${
+                  form.settings?.appearanceSettings?.buttonFullWidth ? 'w-full' : 'w-full md:w-auto'
+                }`}
+              >
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {!submitting && form.settings?.appearanceSettings?.buttonIcon && (
+                  <span className="mr-2">{form.settings.appearanceSettings.buttonIcon}</span>
+                )}
                 {form.settings?.submitButtonText || 'Submit'}
               </Button>
             </form>

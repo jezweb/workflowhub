@@ -8,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Save, TestTube, Info } from 'lucide-react';
-import type { Action, ActionFormData, HttpMethod, ResponseType, ColorTheme, ButtonStyle, OnSuccessAction } from '@/types/action';
+import type { Action, ActionFormData, HttpMethod, ResponseType, OnSuccessAction } from '@/types/action';
 import { HTTP_METHODS, RESPONSE_TYPES, DEFAULT_HEADERS, PAYLOAD_TEMPLATE_VARIABLES, COLOR_THEMES } from '@/types/action';
+import type { ColorTheme, ButtonStyle } from '@/lib/appearance';
 import { ActionEditor } from './ActionEditor';
 import { actionsApi } from '@/lib/api';
 

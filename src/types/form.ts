@@ -52,13 +52,11 @@ export interface FormField {
 export type ResponseType = 'toast' | 'modal' | 'redirect' | 'html';
 
 export interface AppearanceSettings {
-  buttonVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
-  buttonSize?: 'sm' | 'default' | 'lg';
+  buttonIcon?: string; // Emoji for the submit button
+  colorTheme?: 'ocean' | 'forest' | 'sunset' | 'berry' | 'rose' | 'slate' | 'emerald' | 'amber' | 'indigo';
+  buttonStyle?: 'solid' | 'gradient';
   buttonFullWidth?: boolean;
-  theme?: 'light' | 'dark' | 'auto';
-  primaryColor?: string;
-  backgroundColor?: string;
-  customCss?: string;
+  customCss?: string; // Optional advanced customization
 }
 
 export interface FormSettings {
