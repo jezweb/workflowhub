@@ -54,7 +54,7 @@ export function NotificationPanel() {
 
       {/* Panel */}
       <div className={cn(
-        "fixed right-0 top-0 h-full w-96 bg-white shadow-xl z-50",
+        "fixed right-0 top-0 h-full w-full sm:w-[480px] lg:w-[520px] bg-white shadow-xl z-50",
         "transform transition-transform duration-300",
         isOpen ? "translate-x-0" : "translate-x-full"
       )}>
@@ -77,13 +77,13 @@ export function NotificationPanel() {
           </div>
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between p-3 border-b bg-gray-50">
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
             <div className="flex items-center gap-2">
               <Select 
                 value={filter.status || 'all'} 
                 onValueChange={(value) => handleFilterChange(value === 'all' ? undefined : value as any)}
               >
-                <SelectTrigger className="h-8 w-28">
+                <SelectTrigger className="h-9 w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -95,7 +95,7 @@ export function NotificationPanel() {
               </Select>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
@@ -128,7 +128,7 @@ export function NotificationPanel() {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 overflow-y-auto p-4">
             {isLoading && executions.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 Loading...
@@ -143,7 +143,7 @@ export function NotificationPanel() {
                 <p className="text-sm mt-2">Action executions will appear here</p>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {executions.map(execution => (
                   <NotificationItem key={execution.id} execution={execution} />
                 ))}

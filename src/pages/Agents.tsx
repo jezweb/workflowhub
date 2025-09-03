@@ -23,7 +23,7 @@ export default function Agents() {
 
   const fetchAgents = async () => {
     try {
-      const response = await api.get('/api/agents');
+      const response = await api.get('/agents');
       if (response.data.success) {
         setAgents(response.data.agents);
       }
@@ -59,7 +59,7 @@ export default function Agents() {
     }
 
     try {
-      await api.delete(`/api/agents/${agent.id}`);
+      await api.delete(`/agents/${agent.id}`);
       toast({
         title: 'Success',
         description: 'Agent deleted successfully',
@@ -89,7 +89,7 @@ export default function Agents() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">AI Agents</h1>

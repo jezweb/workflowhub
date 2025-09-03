@@ -59,57 +59,71 @@ export function NotificationItem({ execution }: NotificationItemProps) {
   return (
     <div
       className={cn(
-        "border rounded-lg p-3 cursor-pointer transition-all",
-        !execution.is_read ? "bg-blue-50 border-blue-200" : "bg-white",
+        "border rounded-lg p-4 cursor-pointer transition-all",
+        !execution.is_read ? "bg-blue-50 border-blue-200" : "bg-white hover:bg-gray-50",
         "hover:shadow-md"
       )}
       onClick={handleExpand}
     >
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-2 flex-1">
-          <button className="mt-0.5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <button className="mt-0.5 flex-shrink-0">
             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
           </button>
-          {getStatusIcon()}
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{execution.action_name}</span>
-              {!execution.is_read && (
-                <Badge variant="secondary" className="text-xs">New</Badge>
-              )}
+          <div className="flex-shrink-0 mt-0.5">
+            {getStatusIcon()}
+          </div>
+          <div className="flex-1 min-w-0">
+            {/* First row: Action name and badges */}
+            <div className="flex items-start justify-between gap-2 mb-1">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="font-medium truncate">{execution.action_name}</span>
+                {!execution.is_read && (
+                  <Badge variant="secondary" className="text-xs flex-shrink-0">New</Badge>
+                )}
+              </div>
+              <Badge className={cn(getStatusColor(), "flex-shrink-0")}>
+                {execution.status}
+              </Badge>
             </div>
-            <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-              <span>{formatDistanceToNow(new Date(execution.created_at), { addSuffix: true })}</span>
+            
+            {/* Second row: Metadata */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500">
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {formatDistanceToNow(new Date(execution.created_at), { addSuffix: true })}
+              </span>
               {execution.duration_ms && (
-                <span>• {formatDuration(execution.duration_ms)}</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-400">•</span>
+                  Duration: {formatDuration(execution.duration_ms)}
+                </span>
               )}
               {execution.response_status && (
-                <span>• Status {execution.response_status}</span>
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-400">•</span>
+                  HTTP {execution.response_status}
+                </span>
               )}
             </div>
           </div>
         </div>
         
-        {/* Actions */}
-        <div className="flex items-center gap-1">
-          <Badge className={getStatusColor()}>
-            {execution.status}
-          </Badge>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        </div>
+        {/* Delete button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 flex-shrink-0"
+          onClick={handleDelete}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Expanded Details */}
       {isExpanded && (
-        <div className="mt-3 pt-3 border-t space-y-3">
+        <div className="mt-3 pt-3 border-t space-y-3" onClick={(e) => e.stopPropagation()}>
           {/* Request Details */}
           <div>
             <h4 className="text-sm font-medium mb-1">Request</h4>
@@ -120,13 +134,18 @@ export function NotificationItem({ execution }: NotificationItemProps) {
                 </Badge>
                 <span className="text-gray-600 truncate">{execution.request_url}</span>
               </div>
-              {execution.request_payload && (
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-gray-600">Payload</summary>
-                  <pre className="mt-1 overflow-x-auto">
+              {execution.request_payload && Object.keys(execution.request_payload).length > 0 ? (
+                <details className="mt-2 group">
+                  <summary className="cursor-pointer text-gray-600 hover:text-gray-800 select-none flex items-center gap-1">
+                    <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
+                    Payload
+                  </summary>
+                  <pre className="mt-2 p-2 bg-white rounded border overflow-x-auto text-xs">
                     {JSON.stringify(execution.request_payload, null, 2)}
                   </pre>
                 </details>
+              ) : (
+                <div className="mt-2 text-gray-500 italic">No payload data</div>
               )}
             </div>
           </div>
@@ -137,16 +156,28 @@ export function NotificationItem({ execution }: NotificationItemProps) {
               <h4 className="text-sm font-medium mb-1">Response</h4>
               <div className="bg-gray-50 rounded p-2 text-xs font-mono">
                 {execution.error_message ? (
-                  <div className="text-red-600">{execution.error_message}</div>
-                ) : execution.response_body ? (
-                  <details>
-                    <summary className="cursor-pointer text-gray-600">Body</summary>
-                    <pre className="mt-1 overflow-x-auto max-h-40 overflow-y-auto">
-                      {execution.response_body}
+                  <div className="text-red-600 p-1">{execution.error_message}</div>
+                ) : execution.response_body && execution.response_body.trim() ? (
+                  <details className="group">
+                    <summary className="cursor-pointer text-gray-600 hover:text-gray-800 select-none flex items-center gap-1">
+                      <ChevronRight className="h-3 w-3 transition-transform group-open:rotate-90" />
+                      Body
+                    </summary>
+                    <pre className="mt-2 p-2 bg-white rounded border overflow-x-auto max-h-60 overflow-y-auto text-xs">
+                      {(() => {
+                        try {
+                          // Try to parse and pretty-print JSON
+                          const parsed = JSON.parse(execution.response_body);
+                          return JSON.stringify(parsed, null, 2);
+                        } catch {
+                          // If not JSON, return as-is
+                          return execution.response_body;
+                        }
+                      })()}
                     </pre>
                   </details>
                 ) : (
-                  <span className="text-gray-500">No response body</span>
+                  <span className="text-gray-500 italic">No response body</span>
                 )}
               </div>
             </div>
