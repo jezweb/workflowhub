@@ -5,6 +5,50 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-09-03
+
+### Added
+- **New Field Types**
+  - Heading field for section titles (H1-H6)
+  - Separator field for visual dividers
+  - HTML field for custom HTML content
+  - Hidden field for storing data without display
+
+- **Appearance Settings Tab**
+  - Button styling controls (variant, size, full width)
+  - Theme settings (light/dark/auto mode)
+  - Custom color configuration
+  - Advanced CSS customization option
+
+- **Cloudflare Turnstile Integration**
+  - Bot protection for public forms
+  - Client-side widget integration
+  - Server-side token validation
+  - Validation status tracking
+
+- **Security Enhancements**
+  - Allowed domains configuration for embedding
+  - Origin/Referer validation
+  - Wildcard subdomain support
+  - CORS protection
+
+- **Response Types**
+  - HTML response type for dynamic content from webhooks
+  - Renamed 'page' to 'redirect' for clarity
+  - Support for raw HTML response display in new window
+
+### Changed
+- Enhanced FormBuilder with 4-column tab layout
+- Improved field editor with conditional property display
+- Updated public form renderer to handle all new field types
+- Better organization of form settings
+
+### Technical
+- Database migration for advanced form features
+- Enhanced TypeScript types for new functionality
+- Secure Turnstile verification flow
+- Optimized webhook response handling
+
 ## [2.1.0] - 2025-09-03
 
 ### Added
