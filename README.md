@@ -2,6 +2,8 @@
 
 A modern business workflow management dashboard built on Cloudflare's edge platform with n8n integration. Designed for simplicity, functionality, and ease of use for small teams.
 
+🚀 **Live Demo**: https://workflowhub.webfonts.workers.dev
+
 ## Features
 
 ### 🔐 Authentication & Security
@@ -20,11 +22,13 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 ### 📁 File Management
 - R2-powered file storage with 4MB limit (AutoRAG compatible)
 - Multi-file upload with drag-and-drop zone
-- Grid view with image thumbnails
-- Table view with sortable columns
-- File type icons and metadata display
-- Direct download and delete operations
-- Upload progress tracking
+- **Table view as default** with sortable columns
+- Grid view with file type icons
+- Support for all file types (PDF, DOCX, CSV, JSON, images, etc.)
+- **Authenticated download** with JWT token security
+- Direct delete operations with confirmation
+- Upload progress tracking with status indicators
+- File metadata display (size, type, upload date)
 
 ### 💬 Chat System
 - Nested conversation structure
@@ -96,7 +100,7 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/workflowhub.git
+git clone https://github.com/jezweb/workflowhub.git
 cd workflowhub
 
 # Install dependencies
@@ -172,9 +176,11 @@ The API follows RESTful conventions. All endpoints are prefixed with `/api`.
 - `POST /api/forms/:id/submit` - Submit form
 
 ### Files
-- `GET /api/files` - List files
-- `POST /api/files/upload` - Upload files
-- `DELETE /api/files/:key` - Delete file
+- `GET /api/files` - List files with metadata
+- `POST /api/files/upload` - Upload multiple files (4MB limit per file)
+- `GET /api/files/:id/download` - Download file (requires authentication)
+- `GET /api/files/:id/url` - Get file URL
+- `DELETE /api/files/:id` - Delete file
 
 ### Chat
 - `GET /api/conversations` - List conversations

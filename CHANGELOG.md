@@ -5,6 +5,25 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.3] - 2025-09-03
+
+### Fixed
+- **File Download Authentication Issue**
+  - Fixed download functionality by implementing authenticated fetch with JWT token
+  - Downloads now properly include authorization headers
+  - Creates blob URLs for secure file downloads with proper cleanup
+  - Works correctly for all file types (PDF, DOCX, CSV, JSON, images, etc.)
+
+### Changed
+- **Default File View**
+  - Changed default view from grid to table for better file management
+  - Table view provides more information at a glance
+  - Improved user experience for file browsing
+
+### Deployment
+- Successfully deployed to Cloudflare Workers
+- Live demo available at https://workflowhub.webfonts.workers.dev
+
 ## [2.0.2] - 2025-09-03
 
 ### Added
