@@ -19,7 +19,7 @@ import type { FileRecord, ViewMode, FileUploadProgress } from '@/types/file';
 
 export function FileManager() {
   const [files, setFiles] = useState<FileRecord[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [isLoading, setIsLoading] = useState(true);
   const [showDropZone, setShowDropZone] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress[]>([]);
@@ -113,10 +113,34 @@ export function FileManager() {
 
   const handleDownload = async (file: FileRecord) => {
     try {
+      // Fetch file with authentication
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/files/${file.id}/download`, {
+        headers: {
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create blob URL and trigger download
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = `/api/files/${file.id}/download`;
+      link.href = url;
       link.download = file.name;
+      document.body.appendChild(link);
       link.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      }, 100);
     } catch (error) {
       console.error('Download error:', error);
       toast({

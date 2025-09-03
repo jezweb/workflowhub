@@ -78,10 +78,10 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
   const loadConfigurations = async (agentId: string) => {
     try {
       const response = await api.get(`/agents/${agentId}`);
-      if (response.data.success && response.data.configurations) {
+      if (response.success && response.configurations) {
         setFormData(prev => ({
           ...prev,
-          configurations: response.data.configurations.map((c: AgentConfiguration) => ({
+          configurations: response.configurations.map((c: AgentConfiguration) => ({
             config_key: c.config_key,
             config_value: c.config_value,
             config_type: c.config_type,

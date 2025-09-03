@@ -45,7 +45,7 @@ export default function AgentTester({ agent, onClose }: AgentTesterProps) {
       };
 
       const data = await api.post(
-        `/api/agents/${agent.id}/test`,
+        `/agents/${agent.id}/test`,
         testRequest
       ) as TestAgentResponse;
 
