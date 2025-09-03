@@ -45,6 +45,13 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
   - Emoji icons for buttons
   - 9 color themes with gradient options (ocean, forest, sunset, berry, rose, slate, emerald, amber, indigo)
   - Solid or gradient button styles
+- **Execution tracking & notifications:**
+  - Complete execution history with request/response details
+  - Real-time notification sidebar with unread badge
+  - Status indicators (success/error/pending)
+  - Execution duration tracking
+  - Filter by status, mark as read, clear history
+  - Auto-refresh every 30 seconds
 - Response handling modes (silent, toast, modal, refresh)
 - Test mode with request preview (shows payload without executing)
 - Direct webhook execution with non-blocking async processing

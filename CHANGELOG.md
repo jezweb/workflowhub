@@ -5,6 +5,28 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.2] - 2025-09-03
+
+### Added
+- **Notification System for Action Executions**
+  - Complete execution history tracking with database persistence
+  - Real-time notification sidebar with sliding panel interface
+  - Unread notification badge indicator in application header
+  - Detailed execution logs with request/response data
+  - Status filtering (success/error/pending)
+  - Mark as read functionality (individual or batch)
+  - Clear history with optional status filtering
+  - Auto-refresh every 30 seconds when panel is active
+  - Execution duration tracking and display
+  - Expandable notification items with collapsible details
+
+### Technical Improvements
+- New `action_executions` table for comprehensive tracking
+- RESTful API endpoints for execution management
+- Zustand store for client-side notification state
+- Integrated execution tracking into action workflow
+- Added date-fns for better date formatting
+
 ## [2.0.1] - 2025-09-03
 
 ### Added
