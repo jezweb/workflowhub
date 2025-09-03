@@ -5,6 +5,38 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-09-03
+
+### Added
+- **Enhanced Forms System**
+  - Public form viewing and submission page at `/forms/:id`
+  - Webhook execution on form submission with async processing
+  - Response handling types: toast, modal, page redirect
+  - Form submission tracking and viewing interface
+  - Export submissions to CSV
+  - Clone form functionality
+  - Export/Import forms as JSON
+  - Embed code generation for public forms
+  - Form submission notifications
+  - Webhook response tracking with status and duration
+  - Support for custom R2 bucket configuration
+  - Foundation for Turnstile integration
+
+### Changed
+- **Form Builder Improvements**
+  - Added response type selection (toast/modal/page)
+  - Enhanced webhook configuration with n8n integration focus
+  - Added advanced settings section
+  - Improved form settings organization
+  - Better visual distinction for public forms
+
+### Technical
+- Added comprehensive database migrations for form enhancements
+- Created public API endpoints bypassing auth for public forms
+- Enhanced TypeScript types for form system
+- Integrated with existing notifications system
+- Fire-and-forget webhook execution with status tracking
+
 ## [2.0.3] - 2025-09-03
 
 ### Fixed

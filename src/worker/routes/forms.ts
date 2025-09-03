@@ -62,8 +62,12 @@ app.post('/', async (c) => {
   
   await c.env.DB
     .prepare(`
-      INSERT INTO forms (id, name, description, fields, settings, is_public, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO forms (
+        id, name, description, fields, settings, is_public, 
+        response_type, r2_bucket, turnstile_enabled, turnstile_site_key, 
+        embed_allowed, created_by
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .bind(
       formId,
@@ -72,6 +76,11 @@ app.post('/', async (c) => {
       JSON.stringify(body.fields),
       JSON.stringify(body.settings || {}),
       body.is_public ? 1 : 0,
+      body.response_type || body.settings?.responseType || 'toast',
+      body.r2_bucket || body.settings?.r2Bucket || null,
+      body.turnstile_enabled || body.settings?.turnstileEnabled || 0,
+      body.turnstile_site_key || body.settings?.turnstileSiteKey || null,
+      body.embed_allowed !== false ? 1 : 0,
       userId
     )
     .run();
@@ -88,7 +97,9 @@ app.put('/:id', async (c) => {
   const result = await c.env.DB
     .prepare(`
       UPDATE forms 
-      SET name = ?, description = ?, fields = ?, settings = ?, is_public = ?, updated_at = CURRENT_TIMESTAMP
+      SET name = ?, description = ?, fields = ?, settings = ?, is_public = ?, 
+          response_type = ?, r2_bucket = ?, turnstile_enabled = ?, 
+          turnstile_site_key = ?, embed_allowed = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND created_by = ?
     `)
     .bind(
@@ -97,6 +108,11 @@ app.put('/:id', async (c) => {
       JSON.stringify(body.fields),
       JSON.stringify(body.settings || {}),
       body.is_public ? 1 : 0,
+      body.response_type || body.settings?.responseType || 'toast',
+      body.r2_bucket || body.settings?.r2Bucket || null,
+      body.turnstile_enabled || body.settings?.turnstileEnabled || 0,
+      body.turnstile_site_key || body.settings?.turnstileSiteKey || null,
+      body.embed_allowed !== false ? 1 : 0,
       formId,
       userId
     )
@@ -126,7 +142,165 @@ app.delete('/:id', async (c) => {
   return c.json({ success: true });
 });
 
-// Submit form
+// Get form submissions
+app.get('/:id/submissions', async (c) => {
+  const formId = c.req.param('id');
+  const userId = c.get('jwtPayload').sub;
+  
+  // Check if user owns the form
+  const form = await c.env.DB
+    .prepare('SELECT * FROM forms WHERE id = ? AND created_by = ?')
+    .bind(formId, userId)
+    .first();
+  
+  if (!form) {
+    return c.json({ error: 'Form not found or unauthorized' }, 404);
+  }
+  
+  // Get submissions
+  const submissions = await c.env.DB
+    .prepare(`
+      SELECT * FROM form_submissions 
+      WHERE form_id = ? 
+      ORDER BY created_at DESC
+    `)
+    .bind(formId)
+    .all();
+  
+  // Parse JSON data for each submission
+  const parsedSubmissions = submissions.results.map((sub: any) => ({
+    ...sub,
+    data: typeof sub.data === 'string' ? JSON.parse(sub.data) : sub.data,
+    files: sub.files ? JSON.parse(sub.files) : []
+  }));
+  
+  return c.json({ success: true, submissions: parsedSubmissions });
+});
+
+// Clone form
+app.post('/:id/clone', async (c) => {
+  const formId = c.req.param('id');
+  const userId = c.get('jwtPayload').sub;
+  
+  // Get original form
+  const form = await c.env.DB
+    .prepare('SELECT * FROM forms WHERE id = ? AND created_by = ?')
+    .bind(formId, userId)
+    .first();
+  
+  if (!form) {
+    return c.json({ error: 'Form not found or unauthorized' }, 404);
+  }
+  
+  const newFormId = crypto.randomUUID();
+  
+  // Create cloned form with new ID
+  await c.env.DB
+    .prepare(`
+      INSERT INTO forms (
+        id, name, description, fields, settings, is_public, 
+        response_type, r2_bucket, turnstile_enabled, turnstile_site_key, 
+        embed_allowed, created_by, created_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `)
+    .bind(
+      newFormId,
+      `${form.name} (Copy)`,
+      form.description,
+      form.fields,
+      form.settings,
+      0, // Make clone private by default
+      form.response_type,
+      form.r2_bucket,
+      form.turnstile_enabled,
+      form.turnstile_site_key,
+      form.embed_allowed,
+      userId
+    )
+    .run();
+  
+  return c.json({ success: true, id: newFormId });
+});
+
+// Export form as JSON
+app.get('/:id/export', async (c) => {
+  const formId = c.req.param('id');
+  const userId = c.get('jwtPayload').sub;
+  
+  const form = await c.env.DB
+    .prepare('SELECT * FROM forms WHERE id = ? AND created_by = ?')
+    .bind(formId, userId)
+    .first();
+  
+  if (!form) {
+    return c.json({ error: 'Form not found or unauthorized' }, 404);
+  }
+  
+  // Parse JSON fields
+  const fields = typeof form.fields === 'string' ? JSON.parse(form.fields) : form.fields;
+  const settings = typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings;
+  
+  // Create export object
+  const exportData = {
+    version: '1.0',
+    name: form.name,
+    description: form.description,
+    fields: fields,
+    settings: {
+      ...settings,
+      responseType: form.response_type,
+      r2Bucket: form.r2_bucket,
+      turnstileEnabled: form.turnstile_enabled,
+      embedAllowed: form.embed_allowed
+    }
+  };
+  
+  return c.json(exportData);
+});
+
+// Import form from JSON
+app.post('/import', async (c) => {
+  const userId = c.get('jwtPayload').sub;
+  const body = await c.req.json();
+  
+  // Validate import data
+  if (!body.name || !body.fields || !Array.isArray(body.fields)) {
+    return c.json({ error: 'Invalid form data' }, 400);
+  }
+  
+  const formId = crypto.randomUUID();
+  const settings = body.settings || {};
+  
+  await c.env.DB
+    .prepare(`
+      INSERT INTO forms (
+        id, name, description, fields, settings, is_public, 
+        response_type, r2_bucket, turnstile_enabled, turnstile_site_key, 
+        embed_allowed, created_by
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    .bind(
+      formId,
+      body.name,
+      body.description || null,
+      JSON.stringify(body.fields),
+      JSON.stringify(settings),
+      0, // Imported forms are private by default
+      settings.responseType || 'toast',
+      settings.r2Bucket || null,
+      settings.turnstileEnabled ? 1 : 0,
+      settings.turnstileSiteKey || null,
+      settings.embedAllowed !== false ? 1 : 0,
+      userId
+    )
+    .run();
+  
+  return c.json({ success: true, id: formId });
+});
+
+// Submit form (kept for authenticated submissions)
 app.post('/:id/submit', async (c) => {
   const formId = c.req.param('id');
   const body = await c.req.json();
@@ -149,8 +323,8 @@ app.post('/:id/submit', async (c) => {
   
   await c.env.DB
     .prepare(`
-      INSERT INTO form_submissions (id, form_id, data, submitted_by, ip_address)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO form_submissions (id, form_id, data, submitted_by, ip_address, webhook_status)
+      VALUES (?, ?, ?, ?, ?, 'pending')
     `)
     .bind(
       submissionId,
@@ -160,6 +334,8 @@ app.post('/:id/submit', async (c) => {
       c.req.header('CF-Connecting-IP') || null
     )
     .run();
+  
+  // TODO: Execute webhook if configured (similar to public endpoint)
   
   return c.json({ success: true, id: submissionId });
 });

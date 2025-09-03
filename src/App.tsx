@@ -14,6 +14,7 @@ import { ChatPage } from '@/pages/Chat';
 import { ActionsPage } from '@/pages/Actions';
 import { SettingsPage } from '@/pages/Settings';
 import AgentsPage from '@/pages/Agents';
+import { PublicFormPage } from '@/pages/PublicForm';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,6 +31,9 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          
+          {/* Public form route - no authentication required */}
+          <Route path="/forms/:id" element={<PublicFormPage />} />
           
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>

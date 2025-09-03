@@ -1,134 +1,103 @@
-# Actions Feature Redesign - Scratchpad
-
-## Overview
-Redesigning Actions to be simple one-click shortcuts that trigger n8n workflows in the background.
-
-## Key Principles
-- Actions = instant execution, no user input at runtime
-- All data is pre-configured in action settings
-- Non-blocking async execution
-- Clear visual feedback
-- Beautiful, customizable buttons
+# Forms System Enhancement - Implementation Scratchpad
 
 ## Current State Analysis
-- Actions currently ask for dynamic data on execute (not wanted)
-- Test button doesn't work (TODO comment)
-- No visual customization options
-- Blocking execution with modal dialogs
-- No notification system
+- Forms can be created with field builder
+- Forms have is_public toggle but no public viewing route
+- Form submissions are stored but webhooks don't execute
+- No submission tracking UI
+- No integration with notifications
 
-## Implementation Phases
+## Implementation Plan
 
-### Phase 1: Core Action Improvements ✅ COMPLETED
-- [x] Remove dynamic data dialog
-- [x] Fix variable substitution
-- [x] Add async execution (non-blocking)
-- [x] Implement test action (preview only, no execution)
-- [x] Basic toast notifications
+### Phase 1: Core Functionality (Current Focus)
 
-### Phase 2: Visual Customization ✅ COMPLETED
-- [x] Add icon/emoji field
-- [x] Add color theme options (9 themes with gradients)
-- [x] Create ActionButton component
-- [x] Update ActionBuilder UI (4-tab interface)
+#### 1.1 Public Form Viewing Route
+- [x] Create `/forms/:id` route in App.tsx
+- [x] Build PublicFormView component
+- [x] Add public form API endpoint (bypass auth for public forms)
+- [x] Handle both authenticated and anonymous submissions
 
-### Phase 3: Dashboard Integration ✅ COMPLETED
-- [x] Add actions to dashboard
-- [x] Create action widgets (Quick Actions section)
-- [x] Quick execute buttons with ActionButton component
+#### 1.2 Webhook Execution
+- [x] Modify form submission endpoint to execute webhooks
+- [x] Structure webhook payload properly
+- [x] Handle async execution (fire and forget)
+- [x] Store webhook response/status
 
-### Phase 4: Notification System ✅ COMPLETED
-- [x] Database table for execution history
-- [x] Backend API for execution tracking
-- [x] Notification store (Zustand)
-- [x] Sidebar notifications panel
-- [x] Execution history with details
-- [x] Unread indicators
-- [x] Auto-refresh mechanism
+#### 1.3 Response Handling
+- [x] Add response_type to form settings (toast/modal/page)
+- [x] Implement response handlers in frontend
+- [x] Update FormSettings type
 
-## Phase 4 Implementation Details
+### Phase 2: Submission Management
 
-### Database Schema (action_executions)
-```sql
-CREATE TABLE action_executions (
-  id TEXT PRIMARY KEY,
-  action_id TEXT NOT NULL,
-  user_id TEXT NOT NULL,
-  status TEXT CHECK (status IN ('pending', 'success', 'error')),
-  request_url TEXT,
-  request_method TEXT,
-  request_headers TEXT, -- JSON
-  request_payload TEXT, -- JSON
-  response_status INTEGER,
-  response_body TEXT,
-  error_message TEXT,
-  duration_ms INTEGER,
-  is_read BOOLEAN DEFAULT FALSE,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (action_id) REFERENCES actions(id),
-  FOREIGN KEY (user_id) REFERENCES users(id)
-);
+#### 2.1 Submission Tracking
+- [x] Create FormSubmissions component
+- [x] Add API endpoint for fetching submissions
+- [x] Display submission count on form cards
+- [x] Add submission details modal
+
+#### 2.2 Notifications
+- [x] Integrate with existing notification system
+- [x] Trigger notifications on submission
+- [ ] Add notification preferences
+
+### Phase 3: Enhanced Features
+
+#### 3.1 Form Operations
+- [x] Clone form functionality
+- [x] Export form as JSON
+- [x] Import form from JSON
+
+#### 3.2 File Uploads
+- [ ] Enhance file field for R2 uploads
+- [ ] Add bucket configuration
+- [ ] Handle file upload in submission
+
+#### 3.3 Embedding
+- [ ] Create embed route
+- [ ] Generate embed codes
+- [ ] Configure CORS
+
+#### 3.4 Turnstile
+- [ ] Add Turnstile settings
+- [ ] Frontend integration
+- [ ] Backend validation
+
+## Technical Decisions
+
+### Response Types
+- `toast`: Quick notification, continue on page
+- `modal`: Show response in dialog
+- `page`: Navigate to URL from response
+- All responses are async (non-blocking) by default
+
+### Webhook Payload Structure
+```json
+{
+  "form": {
+    "id": "...",
+    "name": "..."
+  },
+  "submission": {
+    "id": "...",
+    "data": { /* form fields */ },
+    "submitted_at": "...",
+    "submitted_by": "...",
+    "ip_address": "..."
+  }
+}
 ```
 
-### API Endpoints
-- GET /api/executions - List with pagination/filtering
-- GET /api/executions/:id - Get details
-- DELETE /api/executions/:id - Remove record
-- GET /api/executions/unread-count - Count unread
-- PATCH /api/executions/:id/read - Mark as read
-
-### Frontend Components
-- NotificationPanel - Sliding sidebar
-- NotificationItem - Individual execution
-- NotificationIndicator - Badge with count
-- useNotificationStore - Zustand store
-
-### UI Flow
-1. Action executed → Create execution record (pending)
-2. Webhook called → Update with response/error
-3. Notification badge updates
-4. User clicks bell → Panel slides in
-5. Shows recent executions with status
-6. Click item → Expand details
-7. Auto-refresh every 30s when open
-
-## Database Changes Needed
-```sql
-ALTER TABLE actions ADD COLUMN icon TEXT DEFAULT '⚡';
-ALTER TABLE actions ADD COLUMN color_theme TEXT DEFAULT 'slate';
-ALTER TABLE actions ADD COLUMN button_style TEXT DEFAULT 'solid';
-ALTER TABLE actions ADD COLUMN on_success TEXT DEFAULT 'toast';
-```
-
-## Variable System
-System variables to auto-inject:
-- {{user.id}} - Current user's ID
-- {{user.username}} - Current username  
-- {{user.email}} - User's email
-- {{timestamp}} - Unix timestamp
-- {{date}} - Current date ISO format
-- {{datetime}} - Current datetime ISO format
-
-## Color Themes
-- ocean: Blue gradient (#0EA5E9 → #0284C7)
-- forest: Green gradient (#10B981 → #059669)
-- sunset: Orange gradient (#F97316 → #EA580C)
-- berry: Purple gradient (#A855F7 → #9333EA)
-- rose: Pink gradient (#F43F5E → #E11D48)
-- slate: Gray gradient (#64748B → #475569)
-- emerald: Teal gradient (#14B8A6 → #0D9488)
-- amber: Yellow gradient (#F59E0B → #D97706)
-- indigo: Deep blue (#6366F1 → #4F46E5)
-
-## Testing Plan
-1. Test with simple webhook (no payload)
-2. Test with payload and variables
-3. Test error handling
-4. Test UI feedback
-5. Test on dashboard
+### File Upload Strategy
+- Use multipart form data for files
+- Upload to R2 before webhook execution
+- Pass R2 URLs in webhook payload
 
 ## Notes
-- Keep it simple, don't over-engineer
-- Focus on user experience
-- Ensure backward compatibility
-- Document all changes
+- Keep forms and actions separate (Option A)
+- No SMTP needed - handle in n8n
+- Async means fire-and-forget, not a separate response type
+- Maintain simplicity, avoid over-engineering
+
+## Current Task
+Starting with Phase 1.1 - Creating public form viewing route

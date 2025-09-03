@@ -78,6 +78,21 @@ export const formsApi = {
       method: 'POST',
       body: JSON.stringify({ data }),
     }),
+  
+  getSubmissions: (id: string) => apiRequest(`/forms/${id}/submissions`),
+  
+  clone: (id: string) =>
+    apiRequest(`/forms/${id}/clone`, {
+      method: 'POST',
+    }),
+  
+  export: (id: string) => apiRequest(`/forms/${id}/export`),
+  
+  import: (data: any) =>
+    apiRequest('/forms/import', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // Export convenience functions

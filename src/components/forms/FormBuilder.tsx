@@ -263,6 +263,24 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
+                <Label htmlFor="responseType">Response Type</Label>
+                <Select
+                  value={settings.responseType || 'toast'}
+                  onValueChange={(value: 'toast' | 'modal' | 'page') => 
+                    setSettings({ ...settings, responseType: value })
+                  }
+                >
+                  <SelectTrigger id="responseType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="toast">Toast - Quick notification</SelectItem>
+                    <SelectItem value="modal">Modal - Show response in dialog</SelectItem>
+                    <SelectItem value="page">Page - Redirect after submission</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <Label htmlFor="submitButton">Submit Button Text</Label>
                 <Input
                   id="submitButton"
@@ -282,7 +300,7 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                 />
               </div>
               <div>
-                <Label htmlFor="redirectUrl">Redirect URL (after submission)</Label>
+                <Label htmlFor="redirectUrl">Redirect URL (for page response type)</Label>
                 <Input
                   id="redirectUrl"
                   type="url"
@@ -296,11 +314,11 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Integrations</CardTitle>
+              <CardTitle>Webhook Integration</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="webhookUrl">Webhook URL</Label>
+                <Label htmlFor="webhookUrl">Webhook URL (n8n, Make, Zapier, etc.)</Label>
                 <Input
                   id="webhookUrl"
                   type="url"
@@ -329,14 +347,29 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                   </Select>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Advanced Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="embedAllowed"
+                  checked={settings.embedAllowed !== false}
+                  onCheckedChange={(checked) => setSettings({ ...settings, embedAllowed: checked })}
+                />
+                <Label htmlFor="embedAllowed">Allow embedding this form</Label>
+              </div>
               <div>
-                <Label htmlFor="emailNotification">Email Notifications</Label>
+                <Label htmlFor="r2Bucket">R2 Bucket for file uploads (optional)</Label>
                 <Input
-                  id="emailNotification"
-                  type="email"
-                  value={settings.emailNotification || ''}
-                  onChange={(e) => setSettings({ ...settings, emailNotification: e.target.value })}
-                  placeholder="admin@example.com"
+                  id="r2Bucket"
+                  value={settings.r2Bucket || ''}
+                  onChange={(e) => setSettings({ ...settings, r2Bucket: e.target.value })}
+                  placeholder="my-bucket-name"
                 />
               </div>
             </CardContent>

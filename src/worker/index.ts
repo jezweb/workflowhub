@@ -13,6 +13,7 @@ import actionsRoutes from './routes/actions';
 import settingsRoutes from './routes/settings';
 import agentsRoutes from './routes/agents';
 import executionsRoutes from './routes/executions';
+import publicRoutes from './routes/public';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -24,6 +25,7 @@ app.use('*', cors({
 
 // Public routes
 app.route('/api/auth', authRoutes);
+app.route('/api/public', publicRoutes);
 
 // Create a middleware that dynamically gets JWT secret
 const authMiddleware = async (c: any, next: any) => {
