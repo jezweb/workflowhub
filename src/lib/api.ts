@@ -238,6 +238,40 @@ export const settingsApi = {
     }),
 };
 
+// Executions API
+export const executionsApi = {
+  list: (params?: any) => {
+    const queryString = params ? '?' + new URLSearchParams(params).toString() : '';
+    return apiRequest(`/executions${queryString}`);
+  },
+  
+  get: (id: string) => apiRequest(`/executions/${id}`),
+  
+  getUnreadCount: () => apiRequest('/executions/unread/count'),
+  
+  markAsRead: (id: string) =>
+    apiRequest(`/executions/${id}/read`, {
+      method: 'PATCH',
+    }),
+  
+  markAllAsRead: () =>
+    apiRequest('/executions/mark-all-read', {
+      method: 'POST',
+    }),
+  
+  delete: (id: string) =>
+    apiRequest(`/executions/${id}`, {
+      method: 'DELETE',
+    }),
+  
+  clearAll: (status?: string) => {
+    const queryString = status ? `?status=${status}` : '';
+    return apiRequest(`/executions${queryString}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
 // Convenience default export with all APIs
 const api = {
   get: (url: string) => apiRequest(url),

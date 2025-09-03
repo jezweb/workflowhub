@@ -161,6 +161,10 @@ app.post('/:id/execute', async (c) => {
     .bind(userId)
     .first();
   
+  // Create execution record
+  const executionId = crypto.randomUUID();
+  const startTime = Date.now();
+  
   try {
     // Parse and substitute variables in payload
     const payload = JSON.parse(action.payload as string);
@@ -171,27 +175,87 @@ app.post('/:id/execute', async (c) => {
       (user?.email as string) || ''
     );
 
+    const headers = {
+      'Content-Type': 'application/json',
+      ...JSON.parse(action.headers as string),
+    };
+
+    // Create initial execution record (pending)
+    await c.env.DB
+      .prepare(`
+        INSERT INTO action_executions (
+          id, action_id, action_name, user_id, status, 
+          request_url, request_method, request_headers, request_payload,
+          created_at
+        ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?, datetime('now'))
+      `)
+      .bind(
+        executionId,
+        actionId,
+        action.name as string,
+        userId,
+        action.url as string,
+        action.method as string,
+        JSON.stringify(headers),
+        JSON.stringify(substitutedPayload)
+      )
+      .run();
+
     // Execute webhook
     const response = await fetch(action.url as string, {
       method: action.method as string,
-      headers: {
-        'Content-Type': 'application/json',
-        ...JSON.parse(action.headers as string),
-      },
+      headers,
       body: action.method !== 'GET' ? JSON.stringify(substitutedPayload) : undefined,
     });
     
     const result = await response.text();
+    const duration = Date.now() - startTime;
+    
+    // Update execution record with result
+    await c.env.DB
+      .prepare(`
+        UPDATE action_executions 
+        SET status = ?, response_status = ?, response_body = ?, duration_ms = ?
+        WHERE id = ?
+      `)
+      .bind(
+        response.ok ? 'success' : 'error',
+        response.status,
+        result.substring(0, 10000), // Limit response body size
+        duration,
+        executionId
+      )
+      .run();
     
     return c.json({
       success: response.ok,
       status: response.status,
       data: result,
       response_type: action.on_success || action.response_type || 'toast',
+      execution_id: executionId,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Action execution error:', error);
-    return c.json({ error: 'Action execution failed' }, 500);
+    
+    // Update execution record with error
+    const duration = Date.now() - startTime;
+    await c.env.DB
+      .prepare(`
+        UPDATE action_executions 
+        SET status = 'error', error_message = ?, duration_ms = ?
+        WHERE id = ?
+      `)
+      .bind(
+        error.message || 'Unknown error',
+        duration,
+        executionId
+      )
+      .run();
+    
+    return c.json({ 
+      error: 'Action execution failed',
+      execution_id: executionId,
+    }, 500);
   }
 });
 

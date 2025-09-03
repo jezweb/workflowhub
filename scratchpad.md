@@ -37,10 +37,60 @@ Redesigning Actions to be simple one-click shortcuts that trigger n8n workflows 
 - [x] Create action widgets (Quick Actions section)
 - [x] Quick execute buttons with ActionButton component
 
-### Phase 4: Notification System (Future)
-- [ ] Sidebar notifications
-- [ ] Execution history
-- [ ] Click-through details
+### Phase 4: Notification System 🚧 IN PROGRESS
+- [ ] Database table for execution history
+- [ ] Backend API for execution tracking
+- [ ] Notification store (Zustand)
+- [ ] Sidebar notifications panel
+- [ ] Execution history with details
+- [ ] Unread indicators
+- [ ] Auto-refresh mechanism
+
+## Phase 4 Implementation Details
+
+### Database Schema (action_executions)
+```sql
+CREATE TABLE action_executions (
+  id TEXT PRIMARY KEY,
+  action_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  status TEXT CHECK (status IN ('pending', 'success', 'error')),
+  request_url TEXT,
+  request_method TEXT,
+  request_headers TEXT, -- JSON
+  request_payload TEXT, -- JSON
+  response_status INTEGER,
+  response_body TEXT,
+  error_message TEXT,
+  duration_ms INTEGER,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (action_id) REFERENCES actions(id),
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
+```
+
+### API Endpoints
+- GET /api/executions - List with pagination/filtering
+- GET /api/executions/:id - Get details
+- DELETE /api/executions/:id - Remove record
+- GET /api/executions/unread-count - Count unread
+- PATCH /api/executions/:id/read - Mark as read
+
+### Frontend Components
+- NotificationPanel - Sliding sidebar
+- NotificationItem - Individual execution
+- NotificationIndicator - Badge with count
+- useNotificationStore - Zustand store
+
+### UI Flow
+1. Action executed → Create execution record (pending)
+2. Webhook called → Update with response/error
+3. Notification badge updates
+4. User clicks bell → Panel slides in
+5. Shows recent executions with status
+6. Click item → Expand details
+7. Auto-refresh every 30s when open
 
 ## Database Changes Needed
 ```sql

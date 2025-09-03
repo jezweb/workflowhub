@@ -12,6 +12,7 @@ import chatRoutes from './routes/chat';
 import actionsRoutes from './routes/actions';
 import settingsRoutes from './routes/settings';
 import agentsRoutes from './routes/agents';
+import executionsRoutes from './routes/executions';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -40,6 +41,7 @@ app.use('/api/chat/*', authMiddleware);
 app.use('/api/actions/*', authMiddleware);
 app.use('/api/settings/*', authMiddleware);
 app.use('/api/agents/*', authMiddleware);
+app.use('/api/executions/*', authMiddleware);
 
 // Protected API routes
 app.route('/api/forms', formsRoutes);
@@ -49,6 +51,7 @@ app.route('/api/chat', chatRoutes);
 app.route('/api/actions', actionsRoutes);
 app.route('/api/settings', settingsRoutes);
 app.route('/api/agents', agentsRoutes);
+app.route('/api/executions', executionsRoutes);
 
 // Health check
 app.get('/api/health', (c) => {
