@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,6 +15,20 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Form, FormField } from '@/types/form';
 
+// Declare Turnstile types
+declare global {
+  interface Window {
+    turnstile: {
+      render: (element: string | HTMLElement, options: {
+        sitekey: string;
+        callback?: (token: string) => void;
+        'error-callback'?: () => void;
+      }) => string;
+      reset: (widgetId: string) => void;
+    };
+  }
+}
+
 export function PublicFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -23,12 +37,54 @@ export function PublicFormPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const turnstileRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
 
   useEffect(() => {
     if (id) {
       loadForm(id);
     }
   }, [id]);
+
+  useEffect(() => {
+    // Load and initialize Turnstile if enabled
+    if (form?.settings?.turnstileEnabled && form?.settings?.turnstileSiteKey && turnstileRef.current) {
+      // Load Turnstile script
+      const script = document.createElement('script');
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+      script.async = true;
+      script.defer = true;
+      
+      script.onload = () => {
+        // Initialize Turnstile widget
+        if (window.turnstile && turnstileRef.current) {
+          turnstileWidgetId.current = window.turnstile.render(turnstileRef.current, {
+            sitekey: form.settings.turnstileSiteKey!,
+            callback: (token: string) => {
+              setTurnstileToken(token);
+            },
+            'error-callback': () => {
+              toast({
+                title: 'Verification Error',
+                description: 'Please refresh and try again',
+                variant: 'destructive',
+              });
+            },
+          });
+        }
+      };
+      
+      document.head.appendChild(script);
+      
+      return () => {
+        // Cleanup on unmount
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+      };
+    }
+  }, [form, toast]);
 
   const loadForm = async (formId: string) => {
     try {
@@ -111,6 +167,16 @@ export function PublicFormPage() {
   const onSubmit = async (data: any) => {
     if (!form) return;
     
+    // Check if Turnstile is required and token is available
+    if (form.settings?.turnstileEnabled && !turnstileToken) {
+      toast({
+        title: 'Verification Required',
+        description: 'Please complete the security verification',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setSubmitting(true);
     try {
       const response = await fetch(`/api/public/forms/${form.id}/submit`, {
@@ -118,10 +184,13 @@ export function PublicFormPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ data }),
+        body: JSON.stringify({ 
+          data,
+          turnstileToken: form.settings?.turnstileEnabled ? turnstileToken : undefined
+        }),
       });
       
-      const result = await response.json() as { success?: boolean; error?: string; redirectUrl?: string };
+      const result = await response.json() as { success?: boolean; error?: string; redirectUrl?: string; html?: string };
       
       if (!response.ok) {
         throw new Error(result.error || 'Failed to submit form');
@@ -490,6 +559,10 @@ export function PublicFormPage() {
                   </div>
                 ))}
               </div>
+              
+              {form.settings?.turnstileEnabled && (
+                <div ref={turnstileRef} className="mb-4"></div>
+              )}
               
               <Button type="submit" disabled={submitting} className="w-full md:w-auto">
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

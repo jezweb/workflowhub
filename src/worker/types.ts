@@ -4,6 +4,7 @@ export interface Env {
   JWT_SECRET: string;
   CORS_ORIGIN: string;
   DISABLE_REGISTRATION?: string;
+  TURNSTILE_SECRET_KEY?: string;
   ASSETS: Fetcher;
 }
 
