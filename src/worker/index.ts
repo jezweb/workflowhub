@@ -55,9 +55,10 @@ app.get('/api/health', (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// 404 handler
-app.notFound((c) => {
-  return c.json({ error: 'Not found' }, 404);
+// Serve static assets for non-API routes
+app.get('*', async (c) => {
+  // For non-API routes, serve static assets
+  return c.env.ASSETS.fetch(c.req.raw);
 });
 
 // Error handler

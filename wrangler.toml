@@ -5,8 +5,9 @@ compatibility_flags = ["nodejs_compat"]
 account_id = "0460574641fdbb98159c98ebf593e2bd"
 
 # Static assets
-[site]
-bucket = "./dist"
+[assets]
+directory = "./dist"
+binding = "ASSETS"
 
 # D1 Database
 [[d1_databases]]
