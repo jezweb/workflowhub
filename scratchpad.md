@@ -1,103 +1,123 @@
 # Forms System Enhancement - Implementation Scratchpad
 
-## Current State Analysis
-- Forms can be created with field builder
-- Forms have is_public toggle but no public viewing route
-- Form submissions are stored but webhooks don't execute
-- No submission tracking UI
-- No integration with notifications
+## Overview
+Enhancing the Forms system with advanced features while maintaining simplicity and modularity.
 
-## Implementation Plan
+## Features to Implement
 
-### Phase 1: Core Functionality (Current Focus)
+### 1. Response Types
+- [x] Current: toast, modal, page
+- [ ] Rename "page" to "redirect" 
+- [ ] Add "html" response type for dynamic content from webhook
 
-#### 1.1 Public Form Viewing Route
-- [x] Create `/forms/:id` route in App.tsx
-- [x] Build PublicFormView component
-- [x] Add public form API endpoint (bypass auth for public forms)
-- [x] Handle both authenticated and anonymous submissions
+### 2. New Field Types
+- [ ] **Heading** - Display text with H1-H6 levels
+- [ ] **Separator** - Visual divider line
+- [ ] **HTML** - Raw HTML content block
+- [ ] **Hidden** - Store data without display
 
-#### 1.2 Webhook Execution
-- [x] Modify form submission endpoint to execute webhooks
-- [x] Structure webhook payload properly
-- [x] Handle async execution (fire and forget)
-- [x] Store webhook response/status
+### 3. Appearance Settings Tab
+- [ ] Button styling (variant, size, full width)
+- [ ] Theme settings (colors, dark mode)
+- [ ] Custom CSS classes
+- [ ] Apply theme to form fields
 
-#### 1.3 Response Handling
-- [x] Add response_type to form settings (toast/modal/page)
-- [x] Implement response handlers in frontend
-- [x] Update FormSettings type
+### 4. Cloudflare Turnstile
+- [ ] Enable/disable toggle
+- [ ] Site key configuration
+- [ ] Client-side widget integration
+- [ ] Server-side token validation
+- [ ] Store validation status
 
-### Phase 2: Submission Management
+### 5. Embedding Security
+- [ ] Allowed domains field (comma-separated)
+- [ ] Validate Referer/Origin headers
+- [ ] Proper CORS headers
+- [ ] X-Frame-Options handling
 
-#### 2.1 Submission Tracking
-- [x] Create FormSubmissions component
-- [x] Add API endpoint for fetching submissions
-- [x] Display submission count on form cards
-- [x] Add submission details modal
+## Database Schema Changes
 
-#### 2.2 Notifications
-- [x] Integrate with existing notification system
-- [x] Trigger notifications on submission
-- [ ] Add notification preferences
+```sql
+-- New columns for forms table
+ALTER TABLE forms ADD COLUMN response_type TEXT DEFAULT 'toast' 
+  CHECK (response_type IN ('toast', 'modal', 'redirect', 'html'));
+  
+ALTER TABLE forms ADD COLUMN allowed_domains TEXT;
+ALTER TABLE forms ADD COLUMN appearance_settings TEXT; -- JSON
+ALTER TABLE forms ADD COLUMN turnstile_enabled INTEGER DEFAULT 0;
+ALTER TABLE forms ADD COLUMN turnstile_site_key TEXT;
 
-### Phase 3: Enhanced Features
-
-#### 3.1 Form Operations
-- [x] Clone form functionality
-- [x] Export form as JSON
-- [x] Import form from JSON
-
-#### 3.2 File Uploads
-- [ ] Enhance file field for R2 uploads
-- [ ] Add bucket configuration
-- [ ] Handle file upload in submission
-
-#### 3.3 Embedding
-- [ ] Create embed route
-- [ ] Generate embed codes
-- [ ] Configure CORS
-
-#### 3.4 Turnstile
-- [ ] Add Turnstile settings
-- [ ] Frontend integration
-- [ ] Backend validation
-
-## Technical Decisions
-
-### Response Types
-- `toast`: Quick notification, continue on page
-- `modal`: Show response in dialog
-- `page`: Navigate to URL from response
-- All responses are async (non-blocking) by default
-
-### Webhook Payload Structure
-```json
-{
-  "form": {
-    "id": "...",
-    "name": "..."
-  },
-  "submission": {
-    "id": "...",
-    "data": { /* form fields */ },
-    "submitted_at": "...",
-    "submitted_by": "...",
-    "ip_address": "..."
-  }
-}
+-- Update field types
+-- Current: text, email, number, textarea, select, checkbox, radio, date, time, datetime, file, url, tel
+-- Adding: heading, separator, html, hidden
 ```
 
-### File Upload Strategy
-- Use multipart form data for files
-- Upload to R2 before webhook execution
-- Pass R2 URLs in webhook payload
+## Implementation Steps
+
+### Step 1: Database Migration
+- Create 0006_forms_advanced_features.sql
+- Add new columns
+- Update existing "page" to "redirect"
+
+### Step 2: Update Types
+- Update FormField type with new field types
+- Add appearance settings interface
+- Add turnstile configuration interface
+
+### Step 3: FormBuilder Updates
+- Add new field types to Add Field dropdown
+- Implement field-specific configuration
+- Add Appearance tab with styling controls
+
+### Step 4: Public Form Updates
+- Handle new field types rendering
+- Integrate Turnstile widget
+- Implement HTML response handling
+- Check allowed domains
+
+### Step 5: Backend Updates
+- Validate allowed domains
+- Verify Turnstile tokens
+- Handle HTML responses
+- Store appearance settings
+
+## Component Structure
+
+```
+components/forms/
+├── FormBuilder.tsx (existing - add Appearance tab)
+├── FormAppearanceSettings.tsx (new)
+├── FormFieldConfig.tsx (update for new types)
+├── FormTurnstileSettings.tsx (new)
+└── FormEmbedSettings.tsx (new)
+```
+
+## HTML Response Implementation
+Based on SWMS webhook pattern:
+1. Webhook returns HTML in response
+2. Store HTML temporarily
+3. Use window.open() with document.write()
+4. Clean up stored HTML after use
+
+## Testing Checklist
+- [ ] New field types render correctly
+- [ ] Appearance settings apply properly
+- [ ] Turnstile validates tokens
+- [ ] HTML responses open in new tab
+- [ ] Allowed domains restrict embedding
+- [ ] Backward compatibility maintained
+
+## Git Commits Plan
+1. "feat: add database migration for advanced form features"
+2. "feat: add new field types (heading, separator, html, hidden)"
+3. "feat: implement form appearance settings"
+4. "feat: add HTML response type for dynamic content"
+5. "feat: integrate Cloudflare Turnstile"
+6. "feat: add embedding security with allowed domains"
+7. "docs: update documentation for new form features"
 
 ## Notes
-- Keep forms and actions separate (Option A)
-- No SMTP needed - handle in n8n
-- Async means fire-and-forget, not a separate response type
-- Maintain simplicity, avoid over-engineering
-
-## Current Task
-Starting with Phase 1.1 - Creating public form viewing route
+- Keep each feature modular and independent
+- Maintain backward compatibility
+- Use existing patterns from Actions where applicable
+- Test each feature independently before integration

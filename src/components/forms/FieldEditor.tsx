@@ -21,6 +21,9 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
   ];
 
   const needsOptions = ['select', 'radio', 'checkbox'].includes(field.type);
+  const showNameField = !['separator'].includes(field.type);
+  const showPlaceholder = !['heading', 'separator', 'html', 'hidden', 'checkbox', 'radio'].includes(field.type);
+  const showRequired = !['heading', 'separator', 'html'].includes(field.type);
 
   const addOption = () => {
     const newOption: FieldOption = {
@@ -54,19 +57,21 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
         />
       </div>
 
-      <div>
-        <Label htmlFor="name">Field Name</Label>
-        <Input
-          id="name"
-          value={field.name}
-          onChange={(e) => onChange({ name: e.target.value })}
-          placeholder="field_name"
-          pattern="[a-z0-9_]+"
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Use lowercase letters, numbers, and underscores only
-        </p>
-      </div>
+      {showNameField && (
+        <div>
+          <Label htmlFor="name">Field Name</Label>
+          <Input
+            id="name"
+            value={field.name}
+            onChange={(e) => onChange({ name: e.target.value })}
+            placeholder="field_name"
+            pattern="[a-z0-9_]+"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Use lowercase letters, numbers, and underscores only
+          </p>
+        </div>
+      )}
 
       <div>
         <Label htmlFor="width">Field Width</Label>
@@ -87,24 +92,28 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
         </Select>
       </div>
 
-      <div>
-        <Label htmlFor="placeholder">Placeholder</Label>
-        <Input
-          id="placeholder"
-          value={field.placeholder || ''}
-          onChange={(e) => onChange({ placeholder: e.target.value })}
-          placeholder="Enter placeholder text"
-        />
-      </div>
+      {showPlaceholder && (
+        <div>
+          <Label htmlFor="placeholder">Placeholder</Label>
+          <Input
+            id="placeholder"
+            value={field.placeholder || ''}
+            onChange={(e) => onChange({ placeholder: e.target.value })}
+            placeholder="Enter placeholder text"
+          />
+        </div>
+      )}
 
-      <div className="flex items-center space-x-2">
-        <Switch
-          id="required"
-          checked={field.required || false}
-          onCheckedChange={(checked: boolean) => onChange({ required: checked })}
-        />
-        <Label htmlFor="required">Required field</Label>
-      </div>
+      {showRequired && (
+        <div className="flex items-center space-x-2">
+          <Switch
+            id="required"
+            checked={field.required || false}
+            onCheckedChange={(checked: boolean) => onChange({ required: checked })}
+          />
+          <Label htmlFor="required">Required field</Label>
+        </div>
+      )}
 
       {needsOptions && (
         <div>
@@ -224,6 +233,60 @@ export function FieldEditor({ field, onChange }: FieldEditorProps) {
             placeholder="Custom error message"
             rows={2}
           />
+        </div>
+      )}
+
+      {field.type === 'heading' && (
+        <div>
+          <Label htmlFor="headingLevel">Heading Level</Label>
+          <Select
+            value={field.headingLevel || 'h3'}
+            onValueChange={(value: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6') => onChange({ headingLevel: value })}
+          >
+            <SelectTrigger id="headingLevel">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="h1">H1 - Main Title</SelectItem>
+              <SelectItem value="h2">H2 - Section Title</SelectItem>
+              <SelectItem value="h3">H3 - Subsection</SelectItem>
+              <SelectItem value="h4">H4 - Sub-subsection</SelectItem>
+              <SelectItem value="h5">H5 - Minor Heading</SelectItem>
+              <SelectItem value="h6">H6 - Smallest Heading</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {field.type === 'html' && (
+        <div>
+          <Label htmlFor="htmlContent">HTML Content</Label>
+          <Textarea
+            id="htmlContent"
+            value={field.htmlContent || ''}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => onChange({ htmlContent: e.target.value })}
+            placeholder="<p>Enter your HTML content here</p>"
+            rows={6}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Raw HTML will be rendered. Be careful with user-generated content.
+          </p>
+        </div>
+      )}
+
+      {field.type === 'hidden' && (
+        <div>
+          <Label htmlFor="defaultValue">Default Value</Label>
+          <Input
+            id="defaultValue"
+            value={field.defaultValue || ''}
+            onChange={(e) => onChange({ defaultValue: e.target.value })}
+            placeholder="Hidden field value"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            This value will be submitted with the form but not shown to users.
+          </p>
         </div>
       )}
     </div>

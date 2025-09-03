@@ -13,7 +13,11 @@ export type FieldType =
   | 'datetime'
   | 'file'
   | 'url'
-  | 'tel';
+  | 'tel'
+  | 'heading'
+  | 'separator'
+  | 'html'
+  | 'hidden';
 
 export interface FieldOption {
   label: string;
@@ -37,9 +41,25 @@ export interface FormField {
     pattern?: string;
     message?: string;
   };
+  // For heading field
+  headingLevel?: 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+  // For HTML field
+  htmlContent?: string;
+  // For hidden field
+  defaultValue?: string;
 }
 
-export type ResponseType = 'toast' | 'modal' | 'page';
+export type ResponseType = 'toast' | 'modal' | 'redirect' | 'html';
+
+export interface AppearanceSettings {
+  buttonVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  buttonSize?: 'sm' | 'default' | 'lg';
+  buttonFullWidth?: boolean;
+  theme?: 'light' | 'dark' | 'auto';
+  primaryColor?: string;
+  backgroundColor?: string;
+  customCss?: string;
+}
 
 export interface FormSettings {
   submitButtonText?: string;
@@ -53,6 +73,8 @@ export interface FormSettings {
   turnstileEnabled?: boolean;
   turnstileSiteKey?: string;
   embedAllowed?: boolean;
+  allowedDomains?: string;
+  appearanceSettings?: AppearanceSettings;
 }
 
 export interface Form {
@@ -67,6 +89,8 @@ export interface Form {
   turnstile_enabled?: boolean;
   turnstile_site_key?: string;
   embed_allowed?: boolean;
+  allowed_domains?: string;
+  appearance_settings?: AppearanceSettings;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -84,6 +108,8 @@ export interface FormSubmission {
   webhook_executed_at?: string;
   webhook_duration_ms?: number;
   files?: string[]; // R2 file keys
+  turnstile_validated?: boolean;
+  turnstile_challenge_ts?: string;
   created_at: string;
 }
 

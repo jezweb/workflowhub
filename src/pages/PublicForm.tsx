@@ -148,7 +148,7 @@ export function PublicFormPage() {
           setSubmitted(true);
           break;
           
-        case 'page':
+        case 'redirect':
           if (form.settings?.redirectUrl) {
             window.location.href = form.settings.redirectUrl;
           } else if (result && result.redirectUrl) {
@@ -156,6 +156,25 @@ export function PublicFormPage() {
           } else {
             setSubmitted(true);
           }
+          break;
+          
+        case 'html':
+          // Handle HTML response from webhook
+          if (result && result.html) {
+            const newWindow = window.open('', '_blank');
+            if (newWindow) {
+              newWindow.document.open();
+              newWindow.document.write(result.html);
+              newWindow.document.close();
+            } else {
+              toast({
+                title: 'Popup Blocked',
+                description: 'Please allow popups to view the response',
+                variant: 'destructive',
+              });
+            }
+          }
+          setSubmitted(true);
           break;
       }
     } catch (error: any) {
@@ -351,6 +370,41 @@ export function PublicFormPage() {
               </p>
             )}
           </div>
+        );
+        
+      case 'heading':
+        const HeadingTag = field.headingLevel || 'h3';
+        return (
+          <HeadingTag className={`font-bold ${
+            field.headingLevel === 'h1' ? 'text-3xl' :
+            field.headingLevel === 'h2' ? 'text-2xl' :
+            field.headingLevel === 'h3' ? 'text-xl' :
+            field.headingLevel === 'h4' ? 'text-lg' :
+            field.headingLevel === 'h5' ? 'text-base' :
+            'text-sm'
+          }`}>
+            {field.label}
+          </HeadingTag>
+        );
+        
+      case 'separator':
+        return <hr className="border-t border-gray-300 my-2" />;
+        
+      case 'html':
+        return (
+          <div 
+            dangerouslySetInnerHTML={{ __html: field.htmlContent || '' }}
+            className="prose prose-sm max-w-none"
+          />
+        );
+        
+      case 'hidden':
+        return (
+          <input
+            type="hidden"
+            value={field.defaultValue || ''}
+            {...register(field.name)}
+          />
         );
         
       default:

@@ -83,7 +83,11 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
     { type: 'time', label: 'Time' },
     { type: 'file', label: 'File Upload' },
     { type: 'url', label: 'URL' },
-    { type: 'tel', label: 'Phone' }
+    { type: 'tel', label: 'Phone' },
+    { type: 'heading', label: 'Heading' },
+    { type: 'separator', label: 'Separator' },
+    { type: 'html', label: 'HTML Block' },
+    { type: 'hidden', label: 'Hidden Field' }
   ];
 
   return (
@@ -124,10 +128,11 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
       </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="build">Build</TabsTrigger>
           <TabsTrigger value="preview">Preview</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="appearance">Appearance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="build" className="space-y-4">
@@ -266,7 +271,7 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                 <Label htmlFor="responseType">Response Type</Label>
                 <Select
                   value={settings.responseType || 'toast'}
-                  onValueChange={(value: 'toast' | 'modal' | 'page') => 
+                  onValueChange={(value: 'toast' | 'modal' | 'redirect' | 'html') => 
                     setSettings({ ...settings, responseType: value })
                   }
                 >
@@ -276,7 +281,8 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                   <SelectContent>
                     <SelectItem value="toast">Toast - Quick notification</SelectItem>
                     <SelectItem value="modal">Modal - Show response in dialog</SelectItem>
-                    <SelectItem value="page">Page - Redirect after submission</SelectItem>
+                    <SelectItem value="redirect">Redirect - Go to URL after submission</SelectItem>
+                    <SelectItem value="html">HTML - Display dynamic content from webhook</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -300,7 +306,7 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                 />
               </div>
               <div>
-                <Label htmlFor="redirectUrl">Redirect URL (for page response type)</Label>
+                <Label htmlFor="redirectUrl">Redirect URL (for redirect response type)</Label>
                 <Input
                   id="redirectUrl"
                   type="url"
@@ -363,6 +369,42 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                 />
                 <Label htmlFor="embedAllowed">Allow embedding this form</Label>
               </div>
+              {settings.embedAllowed && (
+                <div>
+                  <Label htmlFor="allowedDomains">Allowed Domains (comma-separated)</Label>
+                  <Input
+                    id="allowedDomains"
+                    value={settings.allowedDomains || ''}
+                    onChange={(e) => setSettings({ ...settings, allowedDomains: e.target.value })}
+                    placeholder="example.com, app.example.com"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave empty to allow all domains. Specify domains to restrict embedding.
+                  </p>
+                </div>
+              )}
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="turnstileEnabled"
+                  checked={settings.turnstileEnabled === true}
+                  onCheckedChange={(checked) => setSettings({ ...settings, turnstileEnabled: checked })}
+                />
+                <Label htmlFor="turnstileEnabled">Enable Cloudflare Turnstile</Label>
+              </div>
+              {settings.turnstileEnabled && (
+                <div>
+                  <Label htmlFor="turnstileSiteKey">Turnstile Site Key</Label>
+                  <Input
+                    id="turnstileSiteKey"
+                    value={settings.turnstileSiteKey || ''}
+                    onChange={(e) => setSettings({ ...settings, turnstileSiteKey: e.target.value })}
+                    placeholder="0x4AAAAAAA..."
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Get your site key from the Cloudflare Turnstile dashboard.
+                  </p>
+                </div>
+              )}
               <div>
                 <Label htmlFor="r2Bucket">R2 Bucket for file uploads (optional)</Label>
                 <Input
@@ -370,6 +412,168 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                   value={settings.r2Bucket || ''}
                   onChange={(e) => setSettings({ ...settings, r2Bucket: e.target.value })}
                   placeholder="my-bucket-name"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="appearance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Button Styling</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="buttonVariant">Button Style</Label>
+                <Select
+                  value={settings.appearanceSettings?.buttonVariant || 'default'}
+                  onValueChange={(value: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link') => 
+                    setSettings({ 
+                      ...settings, 
+                      appearanceSettings: { 
+                        ...settings.appearanceSettings, 
+                        buttonVariant: value 
+                      } 
+                    })
+                  }
+                >
+                  <SelectTrigger id="buttonVariant">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="destructive">Destructive</SelectItem>
+                    <SelectItem value="outline">Outline</SelectItem>
+                    <SelectItem value="secondary">Secondary</SelectItem>
+                    <SelectItem value="ghost">Ghost</SelectItem>
+                    <SelectItem value="link">Link</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="buttonSize">Button Size</Label>
+                <Select
+                  value={settings.appearanceSettings?.buttonSize || 'default'}
+                  onValueChange={(value: 'sm' | 'default' | 'lg') => 
+                    setSettings({ 
+                      ...settings, 
+                      appearanceSettings: { 
+                        ...settings.appearanceSettings, 
+                        buttonSize: value 
+                      } 
+                    })
+                  }
+                >
+                  <SelectTrigger id="buttonSize">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sm">Small</SelectItem>
+                    <SelectItem value="default">Default</SelectItem>
+                    <SelectItem value="lg">Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="buttonFullWidth"
+                  checked={settings.appearanceSettings?.buttonFullWidth === true}
+                  onCheckedChange={(checked) => 
+                    setSettings({ 
+                      ...settings, 
+                      appearanceSettings: { 
+                        ...settings.appearanceSettings, 
+                        buttonFullWidth: checked 
+                      } 
+                    })
+                  }
+                />
+                <Label htmlFor="buttonFullWidth">Full width button</Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Theme Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="theme">Theme Mode</Label>
+                <Select
+                  value={settings.appearanceSettings?.theme || 'auto'}
+                  onValueChange={(value: 'light' | 'dark' | 'auto') => 
+                    setSettings({ 
+                      ...settings, 
+                      appearanceSettings: { 
+                        ...settings.appearanceSettings, 
+                        theme: value 
+                      } 
+                    })
+                  }
+                >
+                  <SelectTrigger id="theme">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="light">Light</SelectItem>
+                    <SelectItem value="dark">Dark</SelectItem>
+                    <SelectItem value="auto">Auto (System)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="primaryColor">Primary Color</Label>
+                <Input
+                  id="primaryColor"
+                  type="color"
+                  value={settings.appearanceSettings?.primaryColor || '#3b82f6'}
+                  onChange={(e) => 
+                    setSettings({ 
+                      ...settings, 
+                      appearanceSettings: { 
+                        ...settings.appearanceSettings, 
+                        primaryColor: e.target.value 
+                      } 
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="backgroundColor">Background Color</Label>
+                <Input
+                  id="backgroundColor"
+                  type="color"
+                  value={settings.appearanceSettings?.backgroundColor || '#ffffff'}
+                  onChange={(e) => 
+                    setSettings({ 
+                      ...settings, 
+                      appearanceSettings: { 
+                        ...settings.appearanceSettings, 
+                        backgroundColor: e.target.value 
+                      } 
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <Label htmlFor="customCss">Custom CSS (Advanced)</Label>
+                <Textarea
+                  id="customCss"
+                  value={settings.appearanceSettings?.customCss || ''}
+                  onChange={(e) => 
+                    setSettings({ 
+                      ...settings, 
+                      appearanceSettings: { 
+                        ...settings.appearanceSettings, 
+                        customCss: e.target.value 
+                      } 
+                    })
+                  }
+                  placeholder=".form-container { }\n.submit-button { }"
+                  rows={4}
+                  className="font-mono text-sm"
                 />
               </div>
             </CardContent>
