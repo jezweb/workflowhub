@@ -8,7 +8,6 @@ export interface Agent {
   system_prompt?: string;
   webhook_url: string;
   webhook_method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  history_webhook_url?: string;
   model: string;
   temperature: number;
   max_tokens: number;
@@ -68,7 +67,6 @@ export interface CreateAgentRequest {
   system_prompt?: string;
   webhook_url: string;
   webhook_method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  history_webhook_url?: string;
   model?: string;
   temperature?: number;
   max_tokens?: number;
@@ -158,9 +156,6 @@ export function validateAgent(agent: Partial<Agent>): string[] {
     errors.push('Valid webhook URL is required');
   }
   
-  if (agent.history_webhook_url && !isValidUrl(agent.history_webhook_url)) {
-    errors.push('History webhook URL must be valid if provided');
-  }
   
   if (agent.temperature !== undefined && (agent.temperature < 0 || agent.temperature > 2)) {
     errors.push('Temperature must be between 0 and 2');

@@ -39,7 +39,6 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
     system_prompt: '',
     webhook_url: '',
     webhook_method: 'POST',
-    history_webhook_url: '',
     model: 'gpt-4',
     temperature: 0.7,
     max_tokens: 2000,
@@ -61,7 +60,6 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
         system_prompt: agent.system_prompt || '',
         webhook_url: agent.webhook_url,
         webhook_method: agent.webhook_method,
-        history_webhook_url: agent.history_webhook_url || '',
         model: agent.model,
         temperature: agent.temperature,
         max_tokens: agent.max_tokens,
@@ -277,18 +275,6 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="history_webhook_url">History Webhook URL (Optional)</Label>
-              <Input
-                id="history_webhook_url"
-                value={formData.history_webhook_url}
-                onChange={(e) => setFormData({ ...formData, history_webhook_url: e.target.value })}
-                placeholder="https://your-n8n-instance.com/webhook/chat-history"
-              />
-              <p className="text-sm text-muted-foreground mt-1">
-                Optional webhook to fetch conversation history from n8n
-              </p>
-            </div>
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">

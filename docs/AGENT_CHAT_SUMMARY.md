@@ -38,7 +38,7 @@
 
 #### 3. Communication Architecture
 - **Primary webhook** for sending messages
-- **Optional history webhook** for retrieving conversations
+- **Direct D1 database access** for message history
 - **Base64 encoding** for small files (<1MB)
 - **R2 URLs** for larger files (1-4MB)
 

@@ -253,7 +253,6 @@ CREATE TABLE agents (
   system_prompt TEXT,
   webhook_url TEXT NOT NULL,
   webhook_method TEXT DEFAULT 'POST',
-  history_webhook_url TEXT,
   model TEXT DEFAULT 'gpt-4',
   temperature REAL DEFAULT 0.7,
   max_tokens INTEGER DEFAULT 2000,

@@ -32,10 +32,6 @@ function validateAgent(agent: Partial<Agent>): string[] {
     errors.push('Valid webhook URL is required');
   }
   
-  if (agent.history_webhook_url && !isValidUrl(agent.history_webhook_url)) {
-    errors.push('History webhook URL must be valid if provided');
-  }
-  
   if (agent.temperature !== undefined && (agent.temperature < 0 || agent.temperature > 2)) {
     errors.push('Temperature must be between 0 and 2');
   }
@@ -146,10 +142,10 @@ app.post('/', async (c) => {
       c.env.DB.prepare(`
         INSERT INTO agents (
           id, user_id, name, description, avatar_url, system_prompt,
-          webhook_url, webhook_method, history_webhook_url,
+          webhook_url, webhook_method,
           model, temperature, max_tokens, is_active, is_public,
           metadata, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         agentId,
         userId,
@@ -159,7 +155,6 @@ app.post('/', async (c) => {
         body.system_prompt || null,
         body.webhook_url,
         body.webhook_method || 'POST',
-        body.history_webhook_url || null,
         body.model || 'gpt-4',
         body.temperature ?? 0.7,
         body.max_tokens || 2000,
@@ -226,8 +221,8 @@ app.put('/:id', async (c) => {
       return c.json({ success: false, error: 'Agent not found or unauthorized' }, 404);
     }
     
-    // Validate if webhook URLs changed
-    if (body.webhook_url || body.history_webhook_url) {
+    // Validate if webhook URL changed
+    if (body.webhook_url) {
       const errors = validateAgent({ ...existing, ...body });
       if (errors.length > 0) {
         return c.json({ success: false, errors }, 400);
@@ -240,7 +235,7 @@ app.put('/:id', async (c) => {
     
     const updateableFields = [
       'name', 'description', 'avatar_url', 'system_prompt',
-      'webhook_url', 'webhook_method', 'history_webhook_url',
+      'webhook_url', 'webhook_method',
       'model', 'temperature', 'max_tokens', 'is_active', 'is_public'
     ];
     

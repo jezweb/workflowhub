@@ -38,7 +38,6 @@ CREATE TABLE agents (
   
   -- Webhook Configuration
   chat_webhook_url TEXT NOT NULL,        -- Main chat endpoint
-  history_webhook_url TEXT,              -- Get conversation history (optional)
   delete_webhook_url TEXT,               -- Cleanup endpoint (optional)
   
   -- AI Configuration (passed to n8n)
@@ -249,25 +248,9 @@ interface ChatWebhookResponse {
 }
 ```
 
-### History Webhook Format
-```typescript
-// Request
-interface HistoryWebhookRequest {
-  sessionId: string;
-}
-
-// Response
-interface HistoryWebhookResponse {
-  sessionId: string;
-  messages: Array<{
-    message_type: 'human' | 'ai' | 'system';
-    content: string;
-    metadata?: any;
-    timestamp: string;
-  }>;
-  totalMessages: number;
-}
-```
+### Direct Database Access
+Messages are now fetched directly from the n8n chat_memory table in the shared D1 database.
+No separate history webhook is needed - WorkflowHub reads the conversation history directly.
 
 ## Implementation Phases
 
