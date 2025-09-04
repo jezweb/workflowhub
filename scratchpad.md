@@ -1,141 +1,80 @@
-# Chat System Implementation - COMPLETED ✅
+# Context API 500 Error Investigation
 
-## Overview
-Successfully implemented a simplified chat system with direct D1 memory integration for WorkflowHub.
+## Problem Summary
+User reports getting 500 errors when trying to save organization name or team member details in the new Context & Variables system.
 
-## Implemented Features
-1. **Direct D1 Memory Access**: ✅ Reading chat history directly from n8n's chat_memory table
-2. **Flexible Response Parsing**: ✅ Handling multiple webhook response formats
-3. **Shared Database**: ✅ Using same D1 database between n8n and WorkflowHub
-4. **Message Persistence**: ✅ Messages persist across page refreshes
-
-## Architecture (Final)
-1. **Message Storage**: Direct D1 access to n8n's chat_memory table
-2. **Response Handling**: Supports array/object/plain text formats
-3. **Session Management**: conversation_id maps to session_id in chat_memory
-4. **No History Webhooks**: Simplified to direct database queries
-
-## Completed Tasks
-### Phase 1: Backend Improvements ✅
-- ✅ Updated response parsing to handle multiple formats
-  - ✅ Check for array with `output` field (n8n default)
-  - ✅ Check for object with `response` field
-  - ✅ Check for object with `output` field
-  - ✅ Fall back to plain text
-- ✅ Implemented direct D1 message fetching
-- ✅ Removed history_webhook_url usage
-
-### Database Integration ✅
-- ✅ Using n8n's existing chat_memory table
-- ✅ No additional migrations needed
-- ✅ Session ID properly mapped to conversation ID
-
-## n8n Memory Format
-```typescript
-interface N8nMemoryMessage {
-  session_id: string;      // Our conversation_id
-  message_type: 'human' | 'ai';
-  content: string;
-  metadata?: string;       // JSON string
-  timestamp: string;
-}
-
-// Transform to our format:
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: string;
-  metadata?: any;
-}
+## Error Details from Console
+```
+api/context/organization:1  Failed to load resource: the server responded with a status of 500 ()
+hook.js:608 Failed to load organization: Error: Failed to fetch organization
+hook.js:608 Failed to save organization: Error: Failed to update organization
 ```
 
-## Updated Webhook Protocol
+## Investigation Findings
 
-### To n8n (simplified):
-```json
-{
-  "message": "User's message",
-  "conversation_id": "conv_123",
-  "agent_config": {
-    "name": "Agent Name",
-    "system_prompt": "...",
-    "model": "gpt-4",
-    "temperature": 0.7,
-    "max_tokens": 2000
-  },
-  "group_context": {
-    "shared_context": "Optional group context...",
-    "variables": {}
-  }
-}
-```
+### 1. Code Structure Analysis
+- Context routes are properly registered at `/api/context` in `src/worker/index.ts`
+- Routes are protected with JWT middleware
+- Database tables exist in both local and production (verified with wrangler d1 execute)
+- Frontend is making correct API calls with `credentials: 'include'`
 
-### From n8n (flexible formats supported):
-```json
-// Format 1: n8n AI Agent default
-[{ "output": "Response text" }]
+### 2. Build Issues Found
+- **ISSUE 1**: Duplicate variable declarations in `src/worker/routes/public.ts`
+  - Line 27: `const settings = ...` (in first route handler)
+  - Line 77: `const formSettings = ...` (in second route handler)
+  - These are in different function scopes but might be causing bundler issues
+  - Previous fix only renamed the second occurrence, not the first
 
-// Format 2: Object with output
-{ "output": "Response text" }
+### 3. Current State
+- Local wrangler dev server was showing build errors (now restarted and working)
+- Production was deployed with the "fix" but still showing 500 errors
+- The actual error is being caught by the global error handler but not logged properly
 
-// Format 3: Object with response
-{ "response": "Response text" }
+## Root Causes
+1. Incomplete fix of duplicate variable names (first occurrence still uses `settings`)
+2. No proper error handling in context routes - errors bubble up to global handler
+3. Possible JWT authentication issues not being caught
 
-// Format 4: Plain text
-"Response text"
-```
+## Solution Plan
 
-## API Changes
+### Step 1: Fix Variable Naming Conflict
+- Rename first `settings` variable in public.ts to `formSettings` 
+- Update all references (lines 30, 31, 50)
 
-### Fetch Messages (from D1):
-```typescript
-// GET /api/chat/conversations/:id/messages
-const messages = await c.env.DB
-  .prepare(`
-    SELECT message_type, content, timestamp, metadata
-    FROM chat_memory 
-    WHERE session_id = ?
-    ORDER BY timestamp ASC
-    LIMIT 100
-  `)
-  .bind(conversationId)
-  .all();
+### Step 2: Add Error Handling to Context Routes
+- Wrap database operations in try-catch blocks
+- Add specific error messages for debugging
+- Properly handle JSON parsing errors
 
-// Transform to our format
-return messages.results.map(m => ({
-  role: m.message_type === 'human' ? 'user' : 'assistant',
-  content: m.content,
-  timestamp: m.timestamp,
-  metadata: m.metadata ? JSON.parse(m.metadata) : undefined
-}));
-```
+### Step 3: Test & Deploy
+- Test locally with wrangler dev
+- Build production bundle
+- Deploy to Cloudflare Workers
+- Verify with direct API calls
 
-### Store Message (when using local storage):
-```typescript
-// After sending message, store both user and assistant messages
-await c.env.DB.batch([
-  c.env.DB.prepare(`
-    INSERT INTO chat_memory (session_id, message_type, content, timestamp)
-    VALUES (?, 'human', ?, ?)
-  `).bind(conversationId, userMessage, timestamp),
-  
-  c.env.DB.prepare(`
-    INSERT INTO chat_memory (session_id, message_type, content, timestamp)
-    VALUES (?, 'ai', ?, ?)
-  `).bind(conversationId, assistantResponse, timestamp)
-]);
-```
+## File Changes Needed
 
-## Testing Completed ✅
-- ✅ Tested with n8n AI Agent (array with output)
-- ✅ Tested webhook response formats
-- ✅ D1 message fetching working
-- ✅ Messages persist across refreshes
-- ✅ n8n memory node compatibility verified
+1. `/src/worker/routes/public.ts`
+   - Line 27: Rename `settings` to `formSettings`
+   - Lines 30-31, 50: Update references
 
-## Benefits of This Approach
-1. **Simplicity**: No webhooks for history, direct DB access
-2. **Performance**: Faster message loading
-3. **Compatibility**: Works with n8n's memory system
-4. **Flexibility**: Supports various response formats
-5. **Consistency**: One format for all storage modes
+2. `/src/worker/routes/context.ts`
+   - Add try-catch blocks around DB operations
+   - Add better error messages
+   - Handle edge cases (no org exists, JSON parse errors)
+
+## Testing Checklist
+- [x] Local health check works ✅
+- [ ] Local context/organization GET works
+- [ ] Local context/organization PUT works
+- [ ] Production health check works
+- [ ] Production context/organization GET works
+- [ ] Production context/organization PUT works
+- [ ] UI can save organization settings
+- [ ] UI can save team profiles
+
+## Progress Updates
+- Fixed duplicate variable naming in public.ts (both occurrences now use `formSettings`)
+- Added try-catch error handling to organization GET and PUT endpoints
+- Local wrangler dev server restarted successfully
+- TypeScript compilation successful

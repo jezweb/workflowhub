@@ -24,11 +24,11 @@ app.get('/forms/:id', async (c) => {
   }
   
   // Parse settings to check allowed domains
-  const settings = typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings;
+  const formSettings = typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings;
   
   // Check allowed domains if embedding is restricted
-  if (settings?.allowedDomains && origin) {
-    const allowedDomains = settings.allowedDomains.split(',').map((d: string) => d.trim());
+  if (formSettings?.allowedDomains && origin) {
+    const allowedDomains = formSettings.allowedDomains.split(',').map((d: string) => d.trim());
     const requestDomain = new URL(origin).hostname;
     
     if (!allowedDomains.some((domain: string) => {
@@ -47,7 +47,7 @@ app.get('/forms/:id', async (c) => {
   const parsedForm = {
     ...form,
     fields: typeof form.fields === 'string' ? JSON.parse(form.fields) : form.fields,
-    settings,
+    settings: formSettings,
     appearance_settings: typeof form.appearance_settings === 'string' ? 
       JSON.parse(form.appearance_settings) : form.appearance_settings
   };

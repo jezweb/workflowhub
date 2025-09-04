@@ -6,93 +6,105 @@ const app = new Hono<{ Bindings: Env }>();
 
 // Get organization context
 app.get('/organization', async (c) => {
-  const org = await c.env.DB
-    .prepare('SELECT * FROM organization_context LIMIT 1')
-    .first();
+  try {
+    const org = await c.env.DB
+      .prepare('SELECT * FROM organization_context LIMIT 1')
+      .first();
 
-  if (org && org.social_links) {
-    try {
-      org.social_links = JSON.parse(org.social_links as string);
-    } catch (e) {
-      org.social_links = {};
+    if (org && org.social_links) {
+      try {
+        org.social_links = JSON.parse(org.social_links as string);
+      } catch (e) {
+        console.error('Failed to parse social_links:', e);
+        org.social_links = {};
+      }
     }
-  }
 
-  if (org && org.custom_fields) {
-    try {
-      org.custom_fields = JSON.parse(org.custom_fields as string);
-    } catch (e) {
-      org.custom_fields = {};
+    if (org && org.custom_fields) {
+      try {
+        org.custom_fields = JSON.parse(org.custom_fields as string);
+      } catch (e) {
+        console.error('Failed to parse custom_fields:', e);
+        org.custom_fields = {};
+      }
     }
-  }
 
-  return c.json({ success: true, organization: org || null });
+    return c.json({ success: true, organization: org || null });
+  } catch (error) {
+    console.error('Error fetching organization:', error);
+    return c.json({ success: false, error: 'Failed to fetch organization' }, 500);
+  }
 });
 
 // Create or update organization context
 app.put('/organization', async (c) => {
-  const body = await c.req.json();
-  // const userId = c.get('jwtPayload').sub; // For future role-based access
+  try {
+    const body = await c.req.json();
+    // const userId = c.get('jwtPayload').sub; // For future role-based access
 
-  // Check if organization context exists
-  const existing = await c.env.DB
-    .prepare('SELECT id FROM organization_context LIMIT 1')
-    .first();
+    // Check if organization context exists
+    const existing = await c.env.DB
+      .prepare('SELECT id FROM organization_context LIMIT 1')
+      .first();
 
-  const social_links = JSON.stringify(body.social_links || {});
-  const custom_fields = JSON.stringify(body.custom_fields || {});
+    const social_links = JSON.stringify(body.social_links || {});
+    const custom_fields = JSON.stringify(body.custom_fields || {});
 
-  if (existing) {
-    // Update existing
-    await c.env.DB
-      .prepare(`
-        UPDATE organization_context 
-        SET name = ?, description = ?, website = ?, email = ?, phone = ?, 
-            address = ?, logo_url = ?, social_links = ?, context_text = ?, 
-            custom_fields = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `)
-      .bind(
-        body.name,
-        body.description || null,
-        body.website || null,
-        body.email || null,
-        body.phone || null,
-        body.address || null,
-        body.logo_url || null,
-        social_links,
-        body.context_text || null,
-        custom_fields,
-        existing.id
-      )
-      .run();
-  } else {
-    // Create new
-    const id = crypto.randomUUID();
-    await c.env.DB
-      .prepare(`
-        INSERT INTO organization_context (
-          id, name, description, website, email, phone, address, 
-          logo_url, social_links, context_text, custom_fields
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      .bind(
-        id,
-        body.name,
-        body.description || null,
-        body.website || null,
-        body.email || null,
-        body.phone || null,
-        body.address || null,
-        body.logo_url || null,
-        social_links,
-        body.context_text || null,
-        custom_fields
-      )
-      .run();
+    if (existing) {
+      // Update existing
+      await c.env.DB
+        .prepare(`
+          UPDATE organization_context 
+          SET name = ?, description = ?, website = ?, email = ?, phone = ?, 
+              address = ?, logo_url = ?, social_links = ?, context_text = ?, 
+              custom_fields = ?, updated_at = CURRENT_TIMESTAMP
+          WHERE id = ?
+        `)
+        .bind(
+          body.name,
+          body.description || null,
+          body.website || null,
+          body.email || null,
+          body.phone || null,
+          body.address || null,
+          body.logo_url || null,
+          social_links,
+          body.context_text || null,
+          custom_fields,
+          existing.id
+        )
+        .run();
+    } else {
+      // Create new
+      const id = crypto.randomUUID();
+      await c.env.DB
+        .prepare(`
+          INSERT INTO organization_context (
+            id, name, description, website, email, phone, address, 
+            logo_url, social_links, context_text, custom_fields
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `)
+        .bind(
+          id,
+          body.name,
+          body.description || null,
+          body.website || null,
+          body.email || null,
+          body.phone || null,
+          body.address || null,
+          body.logo_url || null,
+          social_links,
+          body.context_text || null,
+          custom_fields
+        )
+        .run();
+    }
+
+    return c.json({ success: true });
+  } catch (error) {
+    console.error('Error updating organization:', error);
+    return c.json({ success: false, error: 'Failed to update organization' }, 500);
   }
-
-  return c.json({ success: true });
 });
 
 // Get all team profiles
