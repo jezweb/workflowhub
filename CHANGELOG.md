@@ -5,6 +5,26 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2025-09-04
+
+### Fixed
+- **Chat Response Parsing** - Now correctly handles n8n's array format with 'output' field
+- **Message Persistence** - Messages now persist across page refreshes using D1 storage
+- **Database Integration** - Fixed 500 errors by using shared D1 database with n8n
+
+### Changed
+- **Simplified Architecture** - Removed separate history webhooks in favor of direct D1 access
+- **Flexible Response Handling** - Supports multiple webhook response formats:
+  - Array with output field (n8n AI Agent default)
+  - Object with response or output field
+  - Plain text fallback
+- **Direct Memory Access** - WorkflowHub now reads messages directly from n8n's chat_memory table
+
+### Technical
+- Session ID in chat_memory table maps to conversation ID
+- No additional migrations needed - uses existing n8n table structure
+- Improved error handling for missing tables
+
 ## [2.3.0] - 2025-09-04
 
 ### Added

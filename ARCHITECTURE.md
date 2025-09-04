@@ -53,20 +53,27 @@ WorkflowHub is a business workflow management dashboard built on Cloudflare's ed
   - Each group linked to a specific agent
   - n8n webhook protocol for message processing
   - Context persistence within group sessions
+  - Flexible webhook response format support
+- **Direct D1 Memory Integration**
+  - Shared database with n8n for seamless message storage
+  - Uses n8n's chat_memory table format
+  - Session ID mapped to conversation ID
+  - No separate history webhooks needed
 - **Rich Messaging**
   - User and assistant message display
   - File attachment support
   - Message timestamps and copy functionality
   - Loading indicators for async responses
+  - Message persistence across page refreshes
 - **Flexible UI** with resizable panels
   - Groups sidebar
   - Conversation list
-  - Message history
+  - Message history with D1 persistence
   - Input area with attachments
 - **State Management** via Zustand store
   - Local message caching
   - Optimistic UI updates
-  - Persistent conversation history
+  - Persistent conversation history from D1
 
 ### 📁 File Management
 - R2 storage integration with 4MB limit (AutoRAG compatible)
@@ -602,12 +609,12 @@ worker/
 
 ### Chat Message Flow
 1. User sends message → POST to API
-2. Worker stores in D1
-3. Worker forwards to n8n webhook
-4. n8n processes with AI/logic
-5. Response streamed via SSE
-6. Client displays streaming response
-7. Final response stored in D1
+2. Worker forwards to n8n webhook with agent config
+3. n8n processes with AI/logic
+4. n8n stores messages in shared D1 chat_memory table
+5. Worker returns response (supports multiple formats)
+6. Client displays response with optimistic updates
+7. Messages fetched directly from D1 on page load
 
 ### Action Execution Flow
 1. User clicks action button → No input required
@@ -724,9 +731,10 @@ worker/
 ## Agent & Chat Architecture
 
 ### Design Philosophy
-WorkflowHub's AI chat system follows a **separation of concerns** approach:
-- **WorkflowHub**: UI orchestration, agent management, minimal conversation tracking
-- **n8n**: AI processing, conversation memory, message history storage
+WorkflowHub's AI chat system follows a **simplified integration** approach:
+- **WorkflowHub**: UI orchestration, agent management, conversation tracking
+- **n8n**: AI processing, webhook handling
+- **Shared D1 Database**: Both systems use the same database for message storage
 
 ### Architecture Flow
 ```
@@ -736,14 +744,10 @@ WorkflowHub's AI chat system follows a **separation of concerns** approach:
 └─────────────┘    └──────────────┘    └─────────────┘
        │                                       │
        │           ┌─────────────┐            │
-       └──────────▶│ Conversation│◀───────────┘
-                   │  Metadata   │
+       └──────────▶│   Shared    │◀───────────┘
+                   │   D1 DB     │
+                   │ chat_memory │
                    └─────────────┘
-                         │
-                   ┌─────▼─────┐
-                   │  n8n D1   │
-                   │ Chat Mem  │
-                   └───────────┘
 ```
 
 ### Agent Configuration System
@@ -754,15 +758,22 @@ WorkflowHub's AI chat system follows a **separation of concerns** approach:
 5. **Public/Private**: Share agents with team or keep private
 
 ### Memory Management
-- **WorkflowHub Stores**: Agent metadata, conversation titles, message counts
-- **n8n Stores**: Complete message history using D1 Chat Memory nodes
-- **File Handling**: Base64 for small files, R2 URLs for large files
-- **Context Persistence**: n8n manages conversation context across sessions
+- **Shared D1 Database**: Both WorkflowHub and n8n use same database
+- **chat_memory Table**: Standard n8n format for message storage
+  - session_id: Maps to conversation_id
+  - message_type: 'human' or 'ai'
+  - content: Message text
+  - metadata: JSON for additional data
+- **Direct Access**: WorkflowHub reads messages directly from D1
+- **No History Webhooks**: Simplified architecture without separate history endpoints
 
 ### Webhook Protocol
+
+#### Request to n8n:
 ```json
 {
   "message": "User input",
+  "conversation_id": "conv_123",
   "agent_config": {
     "name": "Assistant Name",
     "system_prompt": "You are...",
@@ -770,21 +781,35 @@ WorkflowHub's AI chat system follows a **separation of concerns** approach:
     "temperature": 0.7,
     "max_tokens": 2000
   },
-  "attachments": [
-    {"name": "file.pdf", "data": "base64..." },
-    {"name": "large.pdf", "url": "https://r2.../file.pdf"}
-  ],
-  "conversation_id": "conv_123",
-  "metadata": { "custom": "values" }
+  "group_context": {
+    "shared_context": "Optional group context",
+    "variables": {}
+  }
 }
 ```
 
+#### Response Formats (Flexible):
+```json
+// Format 1: n8n AI Agent default (array with output)
+[{ "output": "Response text" }]
+
+// Format 2: Object with output
+{ "output": "Response text" }
+
+// Format 3: Object with response
+{ "response": "Response text" }
+
+// Format 4: Plain text
+"Response text"
+```
+
 ### Benefits of This Architecture
-1. **Scalability**: n8n handles AI processing load
-2. **Flexibility**: Easy to add new AI providers in n8n
-3. **Simplicity**: WorkflowHub focuses on UI/UX
-4. **Cost Efficiency**: Only pay for AI when used
-5. **Reliability**: n8n handles retries and error management
+1. **Simplicity**: Direct D1 access eliminates webhook complexity
+2. **Performance**: Faster message loading from local database
+3. **Compatibility**: Works seamlessly with n8n's memory system
+4. **Flexibility**: Supports various response formats automatically
+5. **Consistency**: One database, one format for all storage
+6. **Reliability**: No network calls for message history
 
 ### Agent Testing System
 - **Live Testing**: Test webhooks directly from UI

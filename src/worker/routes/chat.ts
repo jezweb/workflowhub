@@ -9,8 +9,6 @@ import type {
   SendMessageRequest,
   ChatWebhookRequest,
   ChatWebhookResponse,
-  HistoryWebhookRequest,
-  HistoryWebhookResponse,
 } from '../../types/chat';
 import type { AgentConfiguration } from '../../types/agent';
 
@@ -386,55 +384,48 @@ app.delete('/conversations/:id', async (c) => {
 // MESSAGES
 // ============================================
 
-// Get messages (fetch from n8n if history webhook is configured)
+// Get messages (direct D1 access to n8n memory format)
 app.get('/conversations/:id/messages', async (c) => {
   const conversationId = c.req.param('id');
   const userId = c.get('jwtPayload').sub;
   
   try {
-    // Verify ownership and get conversation details
+    // Verify ownership
     const conversation = await c.env.DB
       .prepare(`
-        SELECT c.*, a.history_webhook_url 
+        SELECT c.*
         FROM conversations c
-        JOIN agents a ON c.agent_id = a.id
         WHERE c.id = ? AND c.user_id = ?
       `)
       .bind(conversationId, userId)
-      .first() as (Conversation & { history_webhook_url?: string }) | undefined;
+      .first() as Conversation | undefined;
     
     if (!conversation) {
       return c.json({ success: false, error: 'Conversation not found' }, 404);
     }
     
-    // If agent has history webhook, fetch from n8n
-    if (conversation.history_webhook_url) {
-      try {
-        const historyRequest: HistoryWebhookRequest = {
-          conversation_id: conversationId,
-          session_id: conversation.shared_session_id || undefined,
-          limit: 50,
-          offset: 0
-        };
-        
-        const response = await fetch(conversation.history_webhook_url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(historyRequest)
-        });
-        
-        if (response.ok) {
-          const historyResponse: HistoryWebhookResponse = await response.json();
-          return c.json({ success: true, messages: historyResponse.messages });
-        }
-      } catch (error) {
-        console.error('Failed to fetch history from n8n:', error);
-        // Fall through to return empty messages
-      }
-    }
+    // Fetch messages from chat_memory table (n8n format)
+    // Use conversation_id as session_id for n8n compatibility
+    const { results } = await c.env.DB
+      .prepare(`
+        SELECT message_type, content, timestamp, metadata
+        FROM chat_memory 
+        WHERE session_id = ?
+        ORDER BY timestamp ASC
+        LIMIT 100
+      `)
+      .bind(conversationId)
+      .all();
     
-    // Return empty messages array if no history webhook or fetch failed
-    return c.json({ success: true, messages: [] });
+    // Transform n8n format to our ChatMessage format
+    const messages = (results as any[]).map(row => ({
+      role: row.message_type === 'human' ? 'user' : 'assistant',
+      content: row.content,
+      timestamp: row.timestamp,
+      metadata: row.metadata ? JSON.parse(row.metadata) : undefined
+    }));
+    
+    return c.json({ success: true, messages });
   } catch (error) {
     console.error('Failed to fetch messages:', error);
     return c.json({ success: false, error: 'Failed to fetch messages' }, 500);
@@ -546,14 +537,37 @@ app.post('/conversations/:id/messages', async (c) => {
       }, 500);
     }
     
-    // Parse response
+    // Parse response with flexible format support
     let webhookResponse: ChatWebhookResponse;
     const responseText = await response.text();
     
     try {
-      webhookResponse = JSON.parse(responseText);
+      const parsed = JSON.parse(responseText);
+      
+      // Handle different response formats
+      if (Array.isArray(parsed)) {
+        // Format 1: n8n AI Agent default - array with output field
+        const firstItem = parsed[0];
+        webhookResponse = {
+          response: firstItem?.output || firstItem?.response || String(firstItem),
+          conversation_id: conversationId,
+        };
+      } else if (typeof parsed === 'object' && parsed !== null) {
+        // Format 2 & 3: Object with output or response field
+        webhookResponse = {
+          response: parsed.output || parsed.response || JSON.stringify(parsed),
+          conversation_id: conversationId,
+          metadata: parsed.metadata,
+        };
+      } else {
+        // Format 4: Plain JSON value
+        webhookResponse = {
+          response: String(parsed),
+          conversation_id: conversationId,
+        };
+      }
     } catch (e) {
-      // If response is plain text, wrap it
+      // Format 5: Plain text response
       webhookResponse = {
         response: responseText,
         conversation_id: conversationId,
