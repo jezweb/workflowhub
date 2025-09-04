@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { variableService } from '../services/variables';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -118,27 +119,51 @@ app.put('/:id', async (c) => {
   return c.json({ success: true });
 });
 
-// Helper function to substitute variables in payload
-const substituteVariables = (payload: any, userId: string, username: string, email: string): any => {
-  const now = new Date();
-  const variables: Record<string, string> = {
-    '{{user.id}}': userId,
-    '{{user.username}}': username,
-    '{{user.email}}': email,
-    '{{timestamp}}': Math.floor(now.getTime() / 1000).toString(),
-    '{{date}}': now.toISOString().split('T')[0],
-    '{{datetime}}': now.toISOString(),
-    '{{random}}': Math.random().toString(36).substring(7),
+// Get available variables for UI display
+app.get('/variables', async (c) => {
+  const userId = c.get('jwtPayload').sub;
+  
+  const variables = await variableService.getAllVariables({
+    userId,
+    db: c.env.DB
+  });
+
+  // Group variables by category for better UI display
+  const grouped: Record<string, Record<string, string>> = {
+    user: {},
+    organization: {},
+    team: {},
+    custom: {},
+    my: {},
+    time: {},
+    system: {}
   };
 
-  // Convert payload to string, replace variables, then parse back
-  let payloadStr = JSON.stringify(payload);
   Object.entries(variables).forEach(([key, value]) => {
-    payloadStr = payloadStr.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+    if (key.startsWith('{{user.')) {
+      grouped.user[key] = value;
+    } else if (key.startsWith('{{org.')) {
+      grouped.organization[key] = value;
+    } else if (key.startsWith('{{team.')) {
+      grouped.team[key] = value;
+    } else if (key.startsWith('{{custom.')) {
+      grouped.custom[key] = value;
+    } else if (key.startsWith('{{my.')) {
+      grouped.my[key] = value;
+    } else if (key.startsWith('{{time.') || key.includes('timestamp') || key.includes('date')) {
+      grouped.time[key] = value;
+    } else if (key.startsWith('{{system.') || key.includes('random')) {
+      grouped.system[key] = value;
+    }
   });
-  
-  return JSON.parse(payloadStr);
-};
+
+  return c.json({ 
+    success: true, 
+    variables,
+    grouped,
+    total: Object.keys(variables).length
+  });
+});
 
 // Execute action (no dynamic data from user)
 app.post('/:id/execute', async (c) => {
@@ -155,11 +180,11 @@ app.post('/:id/execute', async (c) => {
     return c.json({ error: 'Action not found' }, 404);
   }
 
-  // Get user details for variable substitution
-  const user = await c.env.DB
-    .prepare('SELECT username, email FROM users WHERE id = ?')
-    .bind(userId)
-    .first();
+  // Get all available variables for substitution
+  const variables = await variableService.getAllVariables({
+    userId,
+    db: c.env.DB
+  });
   
   // Create execution record
   const executionId = crypto.randomUUID();
@@ -168,16 +193,15 @@ app.post('/:id/execute', async (c) => {
   try {
     // Parse and substitute variables in payload
     const payload = JSON.parse(action.payload as string);
-    const substitutedPayload = substituteVariables(
-      payload, 
-      userId,
-      (user?.username as string) || '',
-      (user?.email as string) || ''
-    );
+    const substitutedPayload = variableService.substituteInObject(payload, variables);
 
+    // Parse and substitute variables in headers
+    const parsedHeaders = JSON.parse(action.headers as string);
+    const substitutedHeaders = variableService.substituteInObject(parsedHeaders, variables);
+    
     const headers = {
       'Content-Type': 'application/json',
-      ...JSON.parse(action.headers as string),
+      ...substitutedHeaders,
     };
 
     // Create initial execution record (pending)
@@ -201,8 +225,11 @@ app.post('/:id/execute', async (c) => {
       )
       .run();
 
+    // Substitute variables in URL
+    const substitutedUrl = variableService.substituteVariables(action.url as string, variables);
+    
     // Execute webhook
-    const response = await fetch(action.url as string, {
+    const response = await fetch(substitutedUrl, {
       method: action.method as string,
       headers,
       body: action.method !== 'GET' ? JSON.stringify(substitutedPayload) : undefined,
@@ -274,34 +301,36 @@ app.post('/:id/test', async (c) => {
     return c.json({ error: 'Action not found' }, 404);
   }
 
-  // Get user details for variable substitution
-  const user = await c.env.DB
-    .prepare('SELECT username, email FROM users WHERE id = ?')
-    .bind(userId)
-    .first();
+  // Get all available variables for substitution
+  const variables = await variableService.getAllVariables({
+    userId,
+    db: c.env.DB
+  });
   
   try {
     // Parse and substitute variables in payload
     const payload = JSON.parse(action.payload as string);
-    const substitutedPayload = substituteVariables(
-      payload, 
-      userId,
-      (user?.username as string) || '',
-      (user?.email as string) || ''
-    );
+    const substitutedPayload = variableService.substituteInObject(payload, variables);
 
+    // Parse and substitute variables in headers
+    const parsedHeaders = JSON.parse(action.headers as string);
+    const substitutedHeaders = variableService.substituteInObject(parsedHeaders, variables);
+    
     // Prepare headers with test mode indicator
     const headers = {
       'Content-Type': 'application/json',
       'X-Test-Mode': 'true',
-      ...JSON.parse(action.headers as string),
+      ...substitutedHeaders,
     };
 
+    // Substitute variables in URL for preview
+    const substitutedUrl = variableService.substituteVariables(action.url as string, variables);
+    
     // Return request preview without executing
     return c.json({
       success: true,
       preview: {
-        url: action.url,
+        url: substitutedUrl,
         method: action.method,
         headers: headers,
         payload: action.method !== 'GET' ? substitutedPayload : null,
