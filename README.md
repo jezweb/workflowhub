@@ -31,11 +31,12 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 - File metadata display (size, type, upload date)
 
 ### 💬 Chat System
-- Nested conversation structure
-- Real-time streaming responses via SSE
-- File attachments support
-- n8n webhook integration for AI/automation
-- Searchable message history
+- **Conversation Groups** - Organize chats by project/topic with custom icons and colors
+- **Agent Integration** - Each group uses a specific AI agent with shared context
+- **Rich Messaging** - Support for text, code, and file attachments
+- **n8n Webhook Integration** - Process messages through your custom workflows
+- **Resizable UI** - Flexible layout with collapsible panels
+- **Context Persistence** - Maintain conversation context within groups
 
 ### 🎯 Action Buttons
 - **One-click n8n workflow triggers** - no user input required at execution

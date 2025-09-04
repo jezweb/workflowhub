@@ -5,6 +5,30 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-09-04
+
+### Added
+- **Complete Chat System Implementation**
+  - Conversation Groups with shared context and agent assignment
+  - Visual group customization with icons and colors
+  - Pinned groups for quick access
+  - Agent integration with n8n webhook protocol
+  - Rich messaging UI with user/assistant distinction
+  - File attachment support in messages
+  - Resizable panels for flexible layout
+  - Message timestamps and copy functionality
+  - Loading indicators for async responses
+  - Zustand-based state management for chat
+  - Full backend API with group/conversation/message support
+  - Database schema for conversation groups with shared variables
+
+### Changed
+- Chat page now uses new component-based architecture
+- Updated TypeScript types for complete chat system
+
+### Fixed
+- Chat system now fully integrated with existing Agents feature
+
 ## [2.2.1] - 2025-09-04
 
 ### Added

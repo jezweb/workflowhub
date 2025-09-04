@@ -44,12 +44,29 @@ WorkflowHub is a business workflow management dashboard built on Cloudflare's ed
 - Execution tracking with notification system
 - Test mode with request preview
 
-### 💬 Chat System (Planned)
-- Nested conversation folders
-- Message attachments
-- SSE streaming responses
-- Webhook integration for AI/automation
-- Searchable message history
+### 💬 Chat System
+- **Conversation Groups** with shared context and agent assignment
+  - Visual organization with custom icons and colors
+  - Pinned groups for quick access
+  - Shared system prompts and variables
+- **Agent Integration** for AI-powered conversations
+  - Each group linked to a specific agent
+  - n8n webhook protocol for message processing
+  - Context persistence within group sessions
+- **Rich Messaging**
+  - User and assistant message display
+  - File attachment support
+  - Message timestamps and copy functionality
+  - Loading indicators for async responses
+- **Flexible UI** with resizable panels
+  - Groups sidebar
+  - Conversation list
+  - Message history
+  - Input area with attachments
+- **State Management** via Zustand store
+  - Local message caching
+  - Optimistic UI updates
+  - Persistent conversation history
 
 ### 📁 File Management
 - R2 storage integration with 4MB limit (AutoRAG compatible)
@@ -299,6 +316,23 @@ CREATE TABLE dashboard_widgets (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Conversation groups
+CREATE TABLE conversation_groups (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  agent_id TEXT NOT NULL REFERENCES agents(id),
+  name TEXT NOT NULL,
+  description TEXT,
+  shared_context TEXT, -- Shared system prompt/context for all conversations
+  shared_variables JSON, -- Variables available to all conversations in group
+  icon TEXT DEFAULT '📁',
+  color TEXT DEFAULT '#6b7280',
+  is_pinned BOOLEAN DEFAULT FALSE,
+  position INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ## API Design
@@ -351,10 +385,20 @@ POST   /api/database/query   - Execute custom query (admin only)
 
 ### Chat API
 ```
-GET    /api/chat/conversations - List conversations
-POST   /api/chat/conversations - Create conversation
-GET    /api/chat/conversations/:id/messages - Get messages
-POST   /api/chat/conversations/:id/messages - Send message (SSE response)
+# Groups
+GET    /api/chat/groups              - List conversation groups
+POST   /api/chat/groups              - Create conversation group
+PUT    /api/chat/groups/:id          - Update group
+DELETE /api/chat/groups/:id          - Delete group
+
+# Conversations
+GET    /api/chat/conversations        - List conversations (with group filter)
+POST   /api/chat/conversations        - Create conversation
+DELETE /api/chat/conversations/:id    - Delete conversation
+
+# Messages
+GET    /api/chat/conversations/:id/messages - Get messages for conversation
+POST   /api/chat/conversations/:id/messages - Send message (webhook integration)
 ```
 
 ### Actions API
@@ -462,10 +506,13 @@ src/
 │   │   ├── FileGrid.tsx
 │   │   └── FolderTree.tsx
 │   ├── chat/
-│   │   ├── ConversationTree.tsx
-│   │   ├── MessageList.tsx
-│   │   ├── MessageInput.tsx
-│   │   └── ChatWindow.tsx
+│   │   ├── ChatContainer.tsx      # Main chat layout with resizable panels
+│   │   ├── ConversationGroups.tsx # Group list and management
+│   │   ├── ConversationList.tsx   # Conversations within a group
+│   │   ├── ChatMessages.tsx       # Message history display
+│   │   ├── MessageItem.tsx        # Individual message component
+│   │   ├── ChatInput.tsx          # Message input with file attachments
+│   │   └── GroupEditor.tsx        # Modal for group creation/editing
 │   ├── data/
 │   │   ├── DataGrid.tsx
 │   │   ├── TableViewer.tsx
