@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import useChatStore from '@/stores/chatStore';
 import { GROUP_COLORS, GROUP_ICONS } from '@/types/chat';
@@ -59,6 +59,11 @@ export default function GroupEditor({ group, agents, onClose, onSave }: GroupEdi
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{group ? 'Edit Group' : 'Create Group'}</DialogTitle>
+          <DialogDescription>
+            {group 
+              ? 'Edit your conversation group settings and shared context.'
+              : 'Create a new group to organize your conversations with a specific agent and shared context.'}
+          </DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">

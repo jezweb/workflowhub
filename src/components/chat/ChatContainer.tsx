@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, MessageSquare } from 'lucide-react';
+import { Plus, MessageSquare, FolderPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
@@ -184,16 +184,35 @@ export default function ChatContainer() {
               </>
             ) : (
               <div className="h-full flex items-center justify-center">
-                <div className="text-center">
+                <div className="text-center max-w-md">
                   <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-lg font-medium mb-2">No Conversation Selected</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Select a conversation or create a new one to start chatting
+                  <p className="text-muted-foreground mb-6">
+                    Start by creating a group to organize your conversations, or jump right into a new chat
                   </p>
-                  <Button onClick={handleCreateConversation} disabled={creatingConversation}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    New Conversation
-                  </Button>
+                  <div className="flex gap-3 justify-center">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleCreateGroup}
+                      className="flex items-center gap-2"
+                    >
+                      <FolderPlus className="h-4 w-4" />
+                      Create Group
+                    </Button>
+                    <Button 
+                      onClick={handleCreateConversation} 
+                      disabled={creatingConversation}
+                      className="flex items-center gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      New Conversation
+                    </Button>
+                  </div>
+                  {groups.length === 0 && (
+                    <p className="text-sm text-muted-foreground mt-4">
+                      <span className="font-medium">Tip:</span> Groups help you organize conversations with consistent context and settings
+                    </p>
+                  )}
                 </div>
               </div>
             )}
