@@ -74,13 +74,13 @@ app.post('/forms/:id/submit', async (c) => {
   }
   
   // Parse form settings
-  const settings = typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings;
+  const formSettings = typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings;
   
   // Validate Turnstile token if enabled
   let turnstileValidated = false;
   let turnstileChallengeTs = null;
   
-  if (settings?.turnstileEnabled && settings?.turnstileSiteKey) {
+  if (formSettings?.turnstileEnabled && formSettings?.turnstileSiteKey) {
     if (!body.turnstileToken) {
       return c.json({ error: 'Security verification required' }, 400);
     }
@@ -143,7 +143,7 @@ app.post('/forms/:id/submit', async (c) => {
     .run();
   
   // Execute webhook if configured
-  if (settings?.webhookUrl) {
+  if (formSettings?.webhookUrl) {
     try {
       // Prepare webhook payload
       const webhookPayload = {
@@ -161,8 +161,8 @@ app.post('/forms/:id/submit', async (c) => {
       };
       
       // Execute webhook (fire and forget for async behavior)
-      const webhookPromise = fetch(settings.webhookUrl, {
-        method: settings.webhookMethod || 'POST',
+      const webhookPromise = fetch(formSettings.webhookUrl, {
+        method: formSettings.webhookMethod || 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -214,7 +214,7 @@ app.post('/forms/:id/submit', async (c) => {
       
       // Don't wait for webhook to complete (async behavior)
       // But we can optionally wait for a short time to get immediate response
-      const responseType = form.response_type || settings?.responseType || 'toast';
+      const responseType = form.response_type || formSettings?.responseType || 'toast';
       
       if (responseType === 'redirect' || responseType === 'html') {
         // For redirect/html response, wait for webhook to get redirect URL or HTML content
@@ -313,7 +313,7 @@ app.post('/forms/:id/submit', async (c) => {
   return c.json({ 
     success: true, 
     id: submissionId,
-    message: settings?.successMessage || 'Form submitted successfully'
+    message: formSettings?.successMessage || 'Form submitted successfully'
   });
 });
 

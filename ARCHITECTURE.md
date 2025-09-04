@@ -114,6 +114,39 @@ WorkflowHub is a business workflow management dashboard built on Cloudflare's ed
 - Schema exploration
 - Responsive column formatting
 
+### 🔧 Context & Variables System
+- **Organization Context** - Company-wide information management
+  - Organization details (name, description, website, email, phone, address)
+  - Logo URL for branding
+  - Social media links (Twitter, LinkedIn, GitHub, etc.)
+  - Custom context text for AI agents
+  - Custom fields for additional metadata
+- **Team Profiles** - Individual user profile management
+  - Personal details (full name, title, department)
+  - Contact information (email, phone, mobile)
+  - Photo URL for avatars
+  - Bio and skills
+  - Custom fields for role-specific data
+- **Custom Variables** - Flexible key-value store
+  - Global variables (available to all users)
+  - Personal variables (user-specific)
+  - Data types: string, number, boolean, JSON
+  - Sensitive variable masking for security
+  - Description field for documentation
+- **Variable Substitution** - Dynamic template system
+  - Organization variables: {{org.name}}, {{org.email}}, {{org.website}}
+  - Team variables: {{team.full_name}}, {{team.title}}, {{team.email}}
+  - Custom variables: {{custom.api_key}}, {{custom.endpoint}}
+  - Personal variables: {{my.api_token}}, {{my.preference}}
+  - User variables: {{user.id}}, {{user.username}}, {{user.email}}
+  - Time variables: {{time.date}}, {{time.timestamp}}, {{time.datetime}}
+  - System variables: {{system.random}}, {{system.uuid}}
+- **Integration Points**
+  - Actions: URL, headers, and payload substitution
+  - Forms: Default values and hidden fields (planned)
+  - Agents: System prompts and context (planned)
+  - Centralized VariableService for consistent substitution
+
 ## System Architecture
 
 ```
@@ -339,6 +372,57 @@ CREATE TABLE conversation_groups (
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Organization context
+CREATE TABLE organization_context (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name TEXT NOT NULL,
+  description TEXT,
+  website TEXT,
+  email TEXT,
+  phone TEXT,
+  address TEXT,
+  logo_url TEXT,
+  social_links JSON, -- {"twitter": "...", "linkedin": "...", etc}
+  context_text TEXT, -- Additional context for AI agents
+  custom_fields JSON, -- Flexible key-value pairs
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Team profiles
+CREATE TABLE team_profiles (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  user_id TEXT NOT NULL UNIQUE REFERENCES users(id),
+  full_name TEXT,
+  title TEXT,
+  department TEXT,
+  phone TEXT,
+  mobile TEXT,
+  email TEXT,
+  photo_url TEXT,
+  bio TEXT,
+  skills JSON, -- Array of skill strings
+  custom_fields JSON, -- Flexible key-value pairs
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Custom variables (key-value store)
+CREATE TABLE custom_variables (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  category TEXT NOT NULL CHECK(category IN ('global', 'user', 'organization')),
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  description TEXT,
+  data_type TEXT DEFAULT 'string' CHECK(data_type IN ('string', 'number', 'boolean', 'json')),
+  is_sensitive BOOLEAN DEFAULT FALSE,
+  user_id TEXT REFERENCES users(id), -- NULL for global/org variables
+  created_by TEXT NOT NULL REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(category, key, user_id)
+);
 ```
 
 ## API Design
@@ -434,6 +518,27 @@ DELETE /api/executions       - Clear history (with filters)
 GET    /api/settings         - Get all settings
 PUT    /api/settings/:key    - Update setting
 DELETE /api/settings/:key    - Delete setting
+```
+
+### Context API
+```
+# Organization
+GET    /api/context/organization    - Get organization context
+PUT    /api/context/organization    - Update organization context
+
+# Team Profiles  
+GET    /api/context/team            - List all team profiles
+GET    /api/context/team/me         - Get current user's profile
+PUT    /api/context/team/me         - Update current user's profile
+
+# Custom Variables
+GET    /api/context/variables       - List variables (filter by category)
+PUT    /api/context/variables       - Create/update variable
+DELETE /api/context/variables/:id   - Delete variable
+GET    /api/context/variables/available - Get all available variables
+
+# Actions Integration
+GET    /api/actions/variables       - Get variables for action substitution
 ```
 
 ### Agents API

@@ -282,6 +282,27 @@ const useAuthStore = create((set) => ({
 
 ## Recent Implementations
 
+### Context & Variables System (v2.3.0)
+- **Organization Context** - Central company information management
+  - Organization details, logo, social links stored in D1
+  - Available as {{org.*}} variables throughout the system
+- **Team Profiles** - Individual user profile system  
+  - Personal details, contact info, bio, skills
+  - Available as {{team.*}} variables for current user
+- **Custom Variables** - Flexible key-value store
+  - Global variables (all users) and personal variables (user-specific)
+  - Support for string, number, boolean, JSON data types
+  - Sensitive variable masking for API keys and secrets
+  - Available as {{custom.*}} and {{my.*}} variables
+- **Variable Service** - Centralized substitution engine
+  - Located in `worker/services/variables.ts`
+  - Handles all variable substitution across Actions
+  - Future integration planned for Forms and Agents
+- **Settings UI** - Three new tabs in Settings page
+  - Organization Settings for company info
+  - Team Profile for user profiles  
+  - Variables for custom variable management
+
 ### Unified Appearance System (v2.2.1)
 - Shared appearance constants in `lib/appearance.ts`
 - 10 predefined color themes with visual previews
