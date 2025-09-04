@@ -5,6 +5,31 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2025-01-04
+
+### Added
+- **Context & Variables System**: Comprehensive template variable system for dynamic content
+  - Organization context management (company details, social links, context text)
+  - Team member profiles with skills and contact information
+  - Custom variables store with global and user-specific variables
+  - Sensitive variable masking for secure storage
+  - Variable substitution in Actions (URL, headers, payload)
+  - Settings UI with dedicated tabs for Organization, Team Profile, and Variables
+  - Grouped variable display showing all available variables by category
+  - Support for nested variable paths (e.g., `{{org.social.twitter}}`)
+
+### Enhanced
+- Actions now support comprehensive variable substitution across all fields
+- Backend variable service for centralized substitution logic
+- TypeScript types for all context-related data structures
+- API endpoints for managing context data
+
+### Technical
+- New database tables: `organization_context`, `team_profiles`, `custom_variables`
+- VariableService class for unified variable management
+- React components for settings management
+- Full TypeScript coverage for new features
+
 ## [2.3.1] - 2025-09-04
 
 ### Fixed

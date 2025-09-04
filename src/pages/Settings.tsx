@@ -4,6 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuthStore } from '@/stores/authStore';
+import { OrganizationSettings } from '@/components/settings/OrganizationSettings';
+import { TeamProfileSettings } from '@/components/settings/TeamProfileSettings';
+import { VariablesSettings } from '@/components/settings/VariablesSettings';
 
 export function SettingsPage() {
   const { user } = useAuthStore();
@@ -17,12 +20,27 @@ export function SettingsPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
+      <Tabs defaultValue="organization" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="organization">Organization</TabsTrigger>
+          <TabsTrigger value="team">Team Profile</TabsTrigger>
+          <TabsTrigger value="variables">Variables</TabsTrigger>
+          <TabsTrigger value="profile">Account</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="organization">
+          <OrganizationSettings />
+        </TabsContent>
+
+        <TabsContent value="team">
+          <TeamProfileSettings />
+        </TabsContent>
+
+        <TabsContent value="variables">
+          <VariablesSettings />
+        </TabsContent>
 
         <TabsContent value="profile">
           <Card>
