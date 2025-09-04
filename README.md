@@ -201,6 +201,10 @@ DEFAULT_WEBHOOK_URL=https://n8n.example.com/webhook/xxx
 # Optional
 SENTRY_DSN=your_sentry_dsn
 DEBUG=false
+REGISTRATION_DISABLED=false
+CUSTOM_R2_BUCKET=workflowhub-files
+TURNSTILE_SITE_KEY=your_site_key
+TURNSTILE_SECRET_KEY=your_secret_key
 ```
 
 ### n8n Integration

@@ -141,21 +141,51 @@ export const actionsApi = {
 
 // Chat API
 export const chatApi = {
-  listConversations: () => apiRequest('/chat/conversations'),
+  // Groups
+  listGroups: () => apiRequest('/chat/groups'),
   
-  createConversation: (title: string, parentId?: string) =>
-    apiRequest('/chat/conversations', {
+  createGroup: (data: any) =>
+    apiRequest('/chat/groups', {
       method: 'POST',
-      body: JSON.stringify({ title, parent_id: parentId }),
+      body: JSON.stringify(data),
     }),
   
+  updateGroup: (id: string, data: any) =>
+    apiRequest(`/chat/groups/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  
+  deleteGroup: (id: string) =>
+    apiRequest(`/chat/groups/${id}`, {
+      method: 'DELETE',
+    }),
+  
+  // Conversations
+  listConversations: (groupId?: string) => {
+    const query = groupId ? `?group_id=${groupId}` : '';
+    return apiRequest(`/chat/conversations${query}`);
+  },
+  
+  createConversation: (data: any) =>
+    apiRequest('/chat/conversations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  
+  deleteConversation: (id: string) =>
+    apiRequest(`/chat/conversations/${id}`, {
+      method: 'DELETE',
+    }),
+  
+  // Messages
   getMessages: (conversationId: string) =>
     apiRequest(`/chat/conversations/${conversationId}/messages`),
   
-  sendMessage: (conversationId: string, content: string, role = 'user') =>
+  sendMessage: (conversationId: string, data: any) =>
     apiRequest(`/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
-      body: JSON.stringify({ content, role }),
+      body: JSON.stringify(data),
     }),
 };
 

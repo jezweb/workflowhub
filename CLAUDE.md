@@ -280,6 +280,16 @@ const useAuthStore = create((set) => ({
 
 **Upload failures**: Check R2 bucket exists and has correct bindings
 
+## Recent Implementations
+
+### Unified Appearance System (v2.2.1)
+- Shared appearance constants in `lib/appearance.ts`
+- 10 predefined color themes with visual previews
+- Default theme uses shadcn primary colors (adapts to light/dark)
+- Consistent appearance between Forms and Actions
+- Live preview in both builders
+- Theme application in public forms
+
 ## Important Notes
 
 ### What We're NOT Doing
@@ -295,6 +305,7 @@ const useAuthStore = create((set) => ({
 - Proper error handling
 - Type safety everywhere
 - User-friendly interfaces
+- Shared components and constants where it makes sense
 
 ## Quick Commands
 

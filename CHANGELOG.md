@@ -5,6 +5,35 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2025-09-04
+
+### Added
+- **Unified Appearance System**
+  - Shared appearance constants between Forms and Actions
+  - Default theme using shadcn primary colors (adapts to light/dark mode)
+  - 10 color themes: default, ocean, forest, sunset, berry, rose, slate, emerald, amber, indigo
+
+### Changed
+- **Forms Appearance Tab Redesign**
+  - Simplified interface to match Actions appearance style
+  - Single-flow design with visual theme selection
+  - Emoji button icons for forms
+  - Live button preview with correct vibrancy (removed disabled attribute)
+
+- **Form Preview Enhancement**
+  - Form preview tab now shows configured appearance theme
+  - Submit button styling matches appearance settings
+
+### Fixed
+- Form button preview vibrancy now matches action buttons
+- TypeScript type definitions for shared appearance system
+- Default theme fallback consistency across components
+
+### Technical
+- Created shared lib/appearance.ts for color themes
+- Updated FormBuilder, FormPreview, and PublicForm components
+- Enhanced type safety with ColorTheme and ButtonStyle types
+
 ## [2.2.0] - 2025-09-03
 
 ### Added

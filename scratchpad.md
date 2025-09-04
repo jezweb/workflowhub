@@ -1,123 +1,212 @@
-# Forms System Enhancement - Implementation Scratchpad
+# Chat System Implementation Scratchpad
 
 ## Overview
-Enhancing the Forms system with advanced features while maintaining simplicity and modularity.
+Implementing a complete chat system with agent integration and conversation groups for WorkflowHub.
 
-## Features to Implement
+## Architecture Decisions
+1. **Conversation Groups**: Flat structure (no nested groups) for simplicity
+2. **Message Storage**: n8n owns message history, we cache recent messages
+3. **Agent Context**: Each group has a default agent with shared context
+4. **Session Management**: Shared session IDs within groups for context persistence
 
-### 1. Response Types
-- [x] Current: toast, modal, page
-- [ ] Rename "page" to "redirect" 
-- [ ] Add "html" response type for dynamic content from webhook
+## Implementation Progress
 
-### 2. New Field Types
-- [ ] **Heading** - Display text with H1-H6 levels
-- [ ] **Separator** - Visual divider line
-- [ ] **HTML** - Raw HTML content block
-- [ ] **Hidden** - Store data without display
+### Phase 1: Database Setup ⏳
+- [ ] Create migration 0008_conversation_groups.sql
+- [ ] Add conversation_groups table
+- [ ] Update conversations table with group_id
+- [ ] Add indexes for performance
 
-### 3. Appearance Settings Tab
-- [ ] Button styling (variant, size, full width)
-- [ ] Theme settings (colors, dark mode)
-- [ ] Custom CSS classes
-- [ ] Apply theme to form fields
+### Phase 2: Backend API 
+- [ ] Update /src/worker/routes/chat.ts
+  - [ ] Add group CRUD endpoints
+  - [ ] Modify conversation creation to support groups
+  - [ ] Implement message sending with agent webhook
+  - [ ] Add history fetching from n8n
+  - [ ] Handle group context in webhooks
 
-### 4. Cloudflare Turnstile
-- [ ] Enable/disable toggle
-- [ ] Site key configuration
-- [ ] Client-side widget integration
-- [ ] Server-side token validation
-- [ ] Store validation status
+### Phase 3: Types & Interfaces
+- [ ] Create /src/types/chat.ts
+  - [ ] ConversationGroup interface
+  - [ ] Conversation interface (updated)
+  - [ ] ChatMessage interface
+  - [ ] WebhookRequest/Response types
 
-### 5. Embedding Security
-- [ ] Allowed domains field (comma-separated)
-- [ ] Validate Referer/Origin headers
-- [ ] Proper CORS headers
-- [ ] X-Frame-Options handling
+### Phase 4: Core Chat Components
+- [ ] /src/components/chat/ChatContainer.tsx - Main layout
+- [ ] /src/components/chat/ConversationGroups.tsx - Group sidebar
+- [ ] /src/components/chat/ConversationList.tsx - Conversations in group
+- [ ] /src/components/chat/ChatMessages.tsx - Message display
+- [ ] /src/components/chat/ChatInput.tsx - Message input
+- [ ] /src/components/chat/MessageItem.tsx - Individual message
 
-## Database Schema Changes
+### Phase 5: Group Management
+- [ ] /src/components/chat/GroupEditor.tsx - Create/edit groups
+- [ ] /src/components/chat/GroupSelector.tsx - Quick group selection
+- [ ] Group context editor
+- [ ] Group visual customization
 
-```sql
--- New columns for forms table
-ALTER TABLE forms ADD COLUMN response_type TEXT DEFAULT 'toast' 
-  CHECK (response_type IN ('toast', 'modal', 'redirect', 'html'));
-  
-ALTER TABLE forms ADD COLUMN allowed_domains TEXT;
-ALTER TABLE forms ADD COLUMN appearance_settings TEXT; -- JSON
-ALTER TABLE forms ADD COLUMN turnstile_enabled INTEGER DEFAULT 0;
-ALTER TABLE forms ADD COLUMN turnstile_site_key TEXT;
+### Phase 6: Integration & Testing
+- [ ] n8n webhook integration testing
+- [ ] File attachment support
+- [ ] Error handling
+- [ ] Loading states
+- [ ] Keyboard shortcuts
 
--- Update field types
--- Current: text, email, number, textarea, select, checkbox, radio, date, time, datetime, file, url, tel
--- Adding: heading, separator, html, hidden
+### Phase 7: Documentation
+- [ ] Update ARCHITECTURE.md
+- [ ] Update README.md
+- [ ] Update CHANGELOG.md
+- [ ] Create example n8n workflows
+
+## API Endpoints Design
+
+### Groups
+- GET /api/chat/groups - List all groups
+- POST /api/chat/groups - Create new group
+- PUT /api/chat/groups/:id - Update group
+- DELETE /api/chat/groups/:id - Delete group
+
+### Conversations (Updated)
+- GET /api/chat/conversations - List all (with optional group_id filter)
+- POST /api/chat/conversations - Create (with optional group_id)
+- GET /api/chat/conversations/:id - Get single conversation
+- DELETE /api/chat/conversations/:id - Delete conversation
+- GET /api/chat/conversations/:id/messages - Get messages (from n8n)
+- POST /api/chat/conversations/:id/messages - Send message
+
+## Webhook Protocol
+
+### To n8n (sending message):
+```json
+{
+  "message": "User's message",
+  "conversation_id": "conv_123",
+  "session_id": "session_456", // Shared within group
+  "agent_config": {
+    "name": "Agent Name",
+    "system_prompt": "...",
+    "model": "gpt-4",
+    "temperature": 0.7,
+    "max_tokens": 2000
+  },
+  "group_context": {
+    "id": "group_789",
+    "name": "Project X",
+    "shared_context": "You are helping with Project X...",
+    "variables": {
+      "project_name": "Project X",
+      "deadline": "2024-03-01"
+    }
+  },
+  "attachments": [],
+  "metadata": {}
+}
 ```
 
-## Implementation Steps
+### From n8n (response):
+```json
+{
+  "response": "Assistant's response",
+  "conversation_id": "conv_123",
+  "message_id": "msg_456",
+  "metadata": {}
+}
+```
 
-### Step 1: Database Migration
-- Create 0006_forms_advanced_features.sql
-- Add new columns
-- Update existing "page" to "redirect"
+### History fetch from n8n:
+```json
+{
+  "conversation_id": "conv_123",
+  "session_id": "session_456",
+  "limit": 50,
+  "offset": 0
+}
+```
 
-### Step 2: Update Types
-- Update FormField type with new field types
-- Add appearance settings interface
-- Add turnstile configuration interface
+## UI/UX Flow
 
-### Step 3: FormBuilder Updates
-- Add new field types to Add Field dropdown
-- Implement field-specific configuration
-- Add Appearance tab with styling controls
-
-### Step 4: Public Form Updates
-- Handle new field types rendering
-- Integrate Turnstile widget
-- Implement HTML response handling
-- Check allowed domains
-
-### Step 5: Backend Updates
-- Validate allowed domains
-- Verify Turnstile tokens
-- Handle HTML responses
-- Store appearance settings
+```
+┌─────────────────────────────────────────────┐
+│  Chat                                       │
+├─────────────┬───────────────────────────────┤
+│ Groups      │  Customer Support             │
+│ ────────    │  ─────────────────────────    │
+│ 📁 Support  │  [Messages Area]              │
+│   ├ Billing │                               │
+│   └ Bugs    │  Assistant: How can I help?   │
+│             │                               │
+│ 🚀 Dev      │  User: I need help with...    │
+│   ├ API     │                               │
+│   └ DB      │  [Input Area]                 │
+│             │  ┌─────────────────────┐      │
+│ + New Group │  │ Type a message...   │ Send │
+└─────────────┴──┴─────────────────────┴──────┘
+```
 
 ## Component Structure
 
 ```
-components/forms/
-├── FormBuilder.tsx (existing - add Appearance tab)
-├── FormAppearanceSettings.tsx (new)
-├── FormFieldConfig.tsx (update for new types)
-├── FormTurnstileSettings.tsx (new)
-└── FormEmbedSettings.tsx (new)
+src/components/chat/
+├── ChatContainer.tsx      # Main container with state
+├── ConversationGroups.tsx # Left sidebar groups
+├── ConversationList.tsx   # Conversations in group
+├── ChatMessages.tsx       # Message display area
+├── ChatInput.tsx         # Input with attachments
+├── MessageItem.tsx       # Individual message
+├── GroupEditor.tsx       # Create/edit groups
+├── GroupSelector.tsx     # Quick group picker
+└── types.ts             # Local component types
 ```
 
-## HTML Response Implementation
-Based on SWMS webhook pattern:
-1. Webhook returns HTML in response
-2. Store HTML temporarily
-3. Use window.open() with document.write()
-4. Clean up stored HTML after use
+## State Management
+
+Using Zustand for chat state:
+```typescript
+interface ChatStore {
+  groups: ConversationGroup[];
+  conversations: Conversation[];
+  activeGroupId: string | null;
+  activeConversationId: string | null;
+  messages: Map<string, ChatMessage[]>;
+  
+  // Actions
+  setActiveGroup: (id: string) => void;
+  setActiveConversation: (id: string) => void;
+  addMessage: (conversationId: string, message: ChatMessage) => void;
+  // ... more actions
+}
+```
 
 ## Testing Checklist
-- [ ] New field types render correctly
-- [ ] Appearance settings apply properly
-- [ ] Turnstile validates tokens
-- [ ] HTML responses open in new tab
-- [ ] Allowed domains restrict embedding
-- [ ] Backward compatibility maintained
+- [ ] Create new group
+- [ ] Create conversation in group
+- [ ] Send message to agent
+- [ ] Receive response from n8n
+- [ ] Switch between conversations
+- [ ] Delete group/conversation
+- [ ] Group context inheritance
+- [ ] File attachments
+- [ ] Error handling
+- [ ] Mobile responsive
+
+## Known Issues / TODOs
+- Consider adding conversation search
+- Think about message export feature
+- Maybe add typing indicators later
+- Consider conversation templates
 
 ## Git Commits Plan
-1. "feat: add database migration for advanced form features"
-2. "feat: add new field types (heading, separator, html, hidden)"
-3. "feat: implement form appearance settings"
-4. "feat: add HTML response type for dynamic content"
-5. "feat: integrate Cloudflare Turnstile"
-6. "feat: add embedding security with allowed domains"
-7. "docs: update documentation for new form features"
+1. Initial database migration and types
+2. Backend API implementation
+3. Core chat components
+4. Group management features
+5. n8n integration complete
+6. Documentation updates
 
 ## Notes
-- Keep each feature modular and independent
-- Maintain backward compatibility
-- Use existing patterns from Actions where applicable
-- Test each feature independently before integration
+- Keep components small and focused
+- Follow existing patterns from Forms/Actions
+- Use shadcn/ui components consistently
+- Don't over-optimize initially
+- Test with real n8n workflows frequently

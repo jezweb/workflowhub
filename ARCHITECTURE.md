@@ -3,6 +3,93 @@
 ## Overview
 WorkflowHub is a business workflow management dashboard built on Cloudflare's edge platform with n8n webhook integration. Designed for simplicity, functionality, and ease of use for small teams.
 
+## Core Features
+
+### 🔐 Authentication & Security
+- JWT-based authentication with session management
+- Secure password hashing with bcrypt (10 salt rounds)
+- Protected API routes with middleware
+- CORS configuration with origin validation
+- Input validation with Zod schemas
+- Allowed domains configuration for form embedding
+- Cloudflare Turnstile integration for bot protection
+
+### 📝 Dynamic Forms
+- Visual form builder with 4-tab interface
+- Flexible field layouts (full, 1/2, 1/3, 1/4 width)
+- Comprehensive field types:
+  - Basic: text, email, number, textarea, select, checkbox, radio
+  - Date/Time: date, time, datetime
+  - Advanced: file, url, tel
+  - Layout: heading (H1-H6), separator, html, hidden
+- Real-time preview with appearance settings
+- Public form submission with webhook integration
+- Response types: toast, modal, redirect, HTML
+- Submission tracking and CSV export
+- Form cloning and JSON import/export
+- Embed code generation
+
+### 🎯 Action Buttons
+- One-click workflow triggers (no user input at execution)
+- Full HTTP method support (GET, POST, PUT, DELETE, PATCH)
+- Custom headers and JSON payload templates
+- Automatic variable substitution:
+  - User data: {{user.id}}, {{user.username}}, {{user.email}}
+  - Time variables: {{timestamp}}, {{date}}, {{datetime}}
+  - Random values: {{random}}
+- Visual customization:
+  - Emoji icons
+  - 10 color themes (default, ocean, forest, sunset, berry, rose, slate, emerald, amber, indigo)
+  - Solid or gradient button styles
+- Execution tracking with notification system
+- Test mode with request preview
+
+### 💬 Chat System (Planned)
+- Nested conversation folders
+- Message attachments
+- SSE streaming responses
+- Webhook integration for AI/automation
+- Searchable message history
+
+### 📁 File Management
+- R2 storage integration with 4MB limit (AutoRAG compatible)
+- Multi-file upload with drag-and-drop
+- Table view (default) and grid view
+- File type icons and image thumbnails
+- Authenticated download with JWT token
+- Direct delete operations
+- Upload progress tracking
+- File metadata display
+
+### 🔔 Notifications
+- Real-time notification sidebar
+- Complete execution history tracking
+- Unread badge indicator
+- Detailed execution logs with request/response data
+- Status filtering (success/error/pending)
+- Mark as read (individual or batch)
+- Clear history with status filtering
+- Auto-refresh every 30 seconds
+
+### 🎨 Appearance Settings
+- Unified appearance system for Forms and Actions
+- Theme modes: light/dark/auto
+- 10 predefined color themes with visual previews
+- Button styling controls:
+  - Variant selection
+  - Size options
+  - Full width toggle
+  - Emoji icons
+- Custom CSS support
+- Live preview of appearance changes
+
+### 📊 Database Viewer
+- Interactive data grid with pagination
+- Sort, filter, and search capabilities
+- CSV and JSON export functionality
+- Schema exploration
+- Responsive column formatting
+
 ## System Architecture
 
 ```
@@ -56,6 +143,7 @@ WorkflowHub is a business workflow management dashboard built on Cloudflare's ed
 CREATE TABLE users (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   username TEXT UNIQUE NOT NULL,
+  email TEXT,
   password_hash TEXT NOT NULL,
   role TEXT DEFAULT 'user',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -76,7 +164,8 @@ CREATE TABLE forms (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   name TEXT NOT NULL,
   description TEXT,
-  fields_json TEXT NOT NULL, -- JSON schema
+  fields_json TEXT NOT NULL, -- JSON schema with field types
+  settings_json TEXT, -- Includes response, webhook, appearance, security settings
   is_public BOOLEAN DEFAULT FALSE,
   webhook_url TEXT,
   success_message TEXT,
@@ -92,6 +181,9 @@ CREATE TABLE form_submissions (
   data_json TEXT NOT NULL,
   user_id TEXT REFERENCES users(id),
   webhook_response TEXT,
+  webhook_status INTEGER,
+  webhook_duration_ms INTEGER,
+  turnstile_verified BOOLEAN DEFAULT FALSE,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -99,12 +191,15 @@ CREATE TABLE form_submissions (
 CREATE TABLE action_buttons (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   label TEXT NOT NULL,
-  icon TEXT,
-  color TEXT,
-  type TEXT NOT NULL, -- 'quick' or 'full'
+  icon TEXT, -- Emoji icon
+  description TEXT,
+  color_theme TEXT DEFAULT 'default', -- Color theme name
+  button_style TEXT DEFAULT 'solid', -- solid or gradient
   http_method TEXT DEFAULT 'POST',
   webhook_url TEXT NOT NULL,
-  payload_json TEXT, -- Dynamic data to send
+  headers_json TEXT, -- Custom headers
+  payload_json TEXT, -- Dynamic data with variable substitution
+  response_type TEXT DEFAULT 'toast', -- silent, toast, modal, refresh
   position INTEGER,
   created_by TEXT REFERENCES users(id),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -177,6 +272,20 @@ CREATE TABLE settings (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Action execution history
+CREATE TABLE action_executions (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  action_id TEXT NOT NULL REFERENCES action_buttons(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  request_json TEXT,
+  response_json TEXT,
+  status TEXT DEFAULT 'pending', -- pending, success, error
+  duration_ms INTEGER,
+  error_message TEXT,
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Dashboard widgets
 CREATE TABLE dashboard_widgets (
   id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -196,11 +305,10 @@ CREATE TABLE dashboard_widgets (
 
 ### Authentication Endpoints
 ```
-POST   /api/auth/register    - Create new user
+POST   /api/auth/register    - Create new user (can be disabled via env)
 POST   /api/auth/login       - Authenticate user
-POST   /api/auth/logout      - End session
-GET    /api/auth/session     - Verify current session
-POST   /api/auth/refresh     - Refresh JWT token
+GET    /api/auth/verify      - Verify current session
+GET    /api/auth/registration-status - Check if registration is enabled
 ```
 
 ### Forms API
@@ -212,54 +320,70 @@ PUT    /api/forms/:id        - Update form
 DELETE /api/forms/:id        - Delete form
 POST   /api/forms/:id/submit - Submit form data
 GET    /api/forms/:id/submissions - View submissions
+POST   /api/forms/:id/clone  - Clone form
+GET    /api/forms/:id/export - Export form as JSON
+POST   /api/forms/import     - Import form from JSON
+```
+
+### Public Forms API (No Auth)
+```
+GET    /api/public/forms/:id - Get public form
+POST   /api/public/forms/:id/submit - Submit public form
 ```
 
 ### Files API
 ```
-GET    /api/files            - List files with folders
-POST   /api/files/upload     - Upload file(s)
-GET    /api/files/:key       - Download file
-DELETE /api/files/:key       - Delete file
-POST   /api/files/folder     - Create virtual folder
+GET    /api/files            - List files with metadata
+POST   /api/files/upload     - Upload file(s) (4MB limit)
+GET    /api/files/:id/download - Download file (authenticated)
+GET    /api/files/:id/url    - Get file URL
+DELETE /api/files/:id        - Delete file
 ```
 
 ### Database API
 ```
-GET    /api/tables           - List all tables
-GET    /api/tables/:name     - Query table data
-POST   /api/tables/:name     - Insert row
-PUT    /api/tables/:name/:id - Update row
-DELETE /api/tables/:name/:id - Delete row
-POST   /api/tables/:name/export - Export as CSV
+GET    /api/database/tables  - List all tables
+GET    /api/database/tables/:name/schema - Get table schema
+GET    /api/database/tables/:name/data - Query table data (paginated)
+GET    /api/database/tables/:name/export - Export as CSV or JSON
+POST   /api/database/query   - Execute custom query (admin only)
 ```
 
 ### Chat API
 ```
-GET    /api/conversations    - Get conversation tree
-POST   /api/conversations    - Create conversation/folder
-PUT    /api/conversations/:id - Update conversation
-DELETE /api/conversations/:id - Delete conversation
-GET    /api/conversations/:id/messages - Get messages
-POST   /api/conversations/:id/messages - Send message (SSE response)
+GET    /api/chat/conversations - List conversations
+POST   /api/chat/conversations - Create conversation
+GET    /api/chat/conversations/:id/messages - Get messages
+POST   /api/chat/conversations/:id/messages - Send message (SSE response)
 ```
 
 ### Actions API
 ```
 GET    /api/actions          - List action buttons
+GET    /api/actions/:id      - Get action details
 POST   /api/actions          - Create action
 PUT    /api/actions/:id      - Update action
 DELETE /api/actions/:id      - Delete action
-POST   /api/actions/:id/execute - Trigger action
+POST   /api/actions/:id/execute - Trigger action (async)
+POST   /api/actions/:id/test - Test action (preview mode)
+```
+
+### Executions API
+```
+GET    /api/executions       - List executions (filterable)
+GET    /api/executions/:id   - Get execution details
+GET    /api/executions/unread/count - Get unread count
+PATCH  /api/executions/:id/read - Mark as read
+POST   /api/executions/mark-all-read - Mark all as read
+DELETE /api/executions/:id   - Delete execution
+DELETE /api/executions       - Clear history (with filters)
 ```
 
 ### Settings API
 ```
 GET    /api/settings         - Get all settings
-GET    /api/settings/:key    - Get specific setting
 PUT    /api/settings/:key    - Update setting
 DELETE /api/settings/:key    - Delete setting
-POST   /api/settings/export  - Export settings
-POST   /api/settings/import  - Import settings
 ```
 
 ### Agents API
@@ -272,22 +396,17 @@ DELETE /api/agents/:id       - Delete agent
 POST   /api/agents/:id/test  - Test agent webhook
 ```
 
-### Chat API (Minimal - n8n owns history)
-```
-GET    /api/chat/conversations        - List conversations
-POST   /api/chat/conversations        - Create conversation
-GET    /api/chat/conversations/:id    - Get conversation metadata
-DELETE /api/chat/conversations/:id    - Delete conversation
-POST   /api/chat/conversations/:id/messages - Send message to agent
-```
-
 ### Dashboard API
 ```
 GET    /api/dashboard/widgets - Get user widgets
 POST   /api/dashboard/widgets - Create widget
 PUT    /api/dashboard/widgets/:id - Update widget
 DELETE /api/dashboard/widgets/:id - Delete widget
-POST   /api/dashboard/layout  - Save layout
+```
+
+### Health Check
+```
+GET    /api/health          - Check API status
 ```
 
 ## Security Architecture
@@ -306,14 +425,17 @@ POST   /api/dashboard/layout  - Save layout
 - **Admin** - Full access (user management, all data)
 
 ### Security Measures
-- Password hashing with bcrypt
-- JWT tokens with 24h expiration
-- CORS configured for n8n origins
-- Input validation with Zod
+- Password hashing with bcrypt (10 salt rounds)
+- JWT tokens with expiration
+- CORS configured with origin validation
+- Input validation with Zod schemas
 - SQL injection prevention (parameterized queries)
 - XSS prevention (React escaping)
-- Rate limiting on auth endpoints
-- File upload validation (type, size)
+- File upload validation (type, size limit 4MB)
+- Cloudflare Turnstile for bot protection
+- Allowed domains configuration for form embedding
+- Origin/Referer validation for public forms
+- Registration can be disabled via environment variable
 
 ## Component Architecture
 
