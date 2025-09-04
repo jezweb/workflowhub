@@ -3,7 +3,6 @@ import type { Env } from '../types';
 import type {
   ConversationGroup,
   Conversation,
-  ChatMessage,
   CreateGroupRequest,
   UpdateGroupRequest,
   CreateConversationRequest,
@@ -12,11 +11,8 @@ import type {
   ChatWebhookResponse,
   HistoryWebhookRequest,
   HistoryWebhookResponse,
-  generateGroupId,
-  generateConversationId,
-  generateSessionId,
 } from '../../types/chat';
-import type { Agent, AgentConfiguration } from '../../types/agent';
+import type { AgentConfiguration } from '../../types/agent';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -495,7 +491,7 @@ app.post('/conversations/:id/messages', async (c) => {
     };
     
     // Add configuration headers
-    for (const config of configs as AgentConfiguration[]) {
+    for (const config of configs as unknown as AgentConfiguration[]) {
       if (config.config_type === 'header') {
         headers[config.config_key] = config.config_value;
       }
@@ -528,8 +524,8 @@ app.post('/conversations/:id/messages', async (c) => {
     }
     
     // Add configuration parameters to metadata
-    for (const config of configs as AgentConfiguration[]) {
-      if (config.config_type === 'parameter') {
+    for (const config of configs as unknown as AgentConfiguration[]) {
+      if (config.config_type === 'parameter' && webhookRequest.metadata) {
         webhookRequest.metadata[config.config_key] = config.config_value;
       }
     }

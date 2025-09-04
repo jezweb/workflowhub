@@ -1,37 +1,22 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageSquare, Plus } from 'lucide-react';
+import ChatContainer from '@/components/chat/ChatContainer';
 
 export function ChatPage() {
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Chat</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            AI-powered conversations
-          </p>
-        </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          New Conversation
-        </Button>
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="p-6 pb-0">
+        <h1 className="text-2xl font-bold text-gray-900">Chat</h1>
+        <p className="mt-1 text-sm text-gray-600">
+          AI-powered conversations with your agents
+        </p>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>No conversations yet</CardTitle>
-          <CardDescription>
-            Start a new conversation to interact with AI
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button variant="outline">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Start Conversation
-          </Button>
-        </CardContent>
-      </Card>
+      
+      {/* Chat Container */}
+      <div className="flex-1 p-6 pt-4">
+        <div className="h-full bg-background rounded-lg border">
+          <ChatContainer />
+        </div>
+      </div>
     </div>
   );
 }
