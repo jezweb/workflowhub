@@ -1,7 +1,12 @@
-export type ColorTheme = 'ocean' | 'forest' | 'sunset' | 'berry' | 'rose' | 'slate' | 'emerald' | 'amber' | 'indigo';
+export type ColorTheme = 'default' | 'ocean' | 'forest' | 'sunset' | 'berry' | 'rose' | 'slate' | 'emerald' | 'amber' | 'indigo';
 export type ButtonStyle = 'solid' | 'gradient';
 
 export const COLOR_THEMES: Record<ColorTheme, { background: string; text: string; gradient?: string }> = {
+  default: { 
+    background: 'bg-primary', 
+    text: 'text-primary-foreground', 
+    gradient: 'bg-gradient-to-r from-primary to-primary/80' 
+  },
   ocean: { 
     background: 'bg-blue-500', 
     text: 'text-white', 

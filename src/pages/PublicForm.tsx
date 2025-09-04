@@ -575,11 +575,11 @@ export function PublicFormPage() {
                 disabled={submitting} 
                 className={`${
                   form.settings?.appearanceSettings?.buttonStyle === 'gradient' && 
-                  COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate'].gradient
-                    ? COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate'].gradient
-                    : COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate']?.background || 'bg-primary'
+                  COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'default'].gradient
+                    ? COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'default'].gradient
+                    : COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'default']?.background || 'bg-primary'
                 } ${
-                  COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'slate']?.text || 'text-primary-foreground'
+                  COLOR_THEMES[form.settings?.appearanceSettings?.colorTheme || 'default']?.text || 'text-primary-foreground'
                 } ${
                   form.settings?.appearanceSettings?.buttonFullWidth ? 'w-full' : 'w-full md:w-auto'
                 }`}

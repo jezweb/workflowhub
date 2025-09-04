@@ -446,7 +446,7 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
             <div>
               <Label htmlFor="colorTheme">Color Theme</Label>
               <Select
-                value={settings.appearanceSettings?.colorTheme || 'slate'}
+                value={settings.appearanceSettings?.colorTheme || 'default'}
                 onValueChange={(value: ColorTheme) => 
                   setSettings({ 
                     ...settings, 
@@ -523,11 +523,11 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                 <Button
                   className={`${
                     settings.appearanceSettings?.buttonStyle === 'gradient' && 
-                    COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
-                      ? COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
-                      : COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].background
+                    COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default'].gradient
+                      ? COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default'].gradient
+                      : COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default'].background
                   } ${
-                    COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].text
+                    COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default'].text
                   } ${
                     settings.appearanceSettings?.buttonFullWidth ? 'w-full' : ''
                   } pointer-events-none`}

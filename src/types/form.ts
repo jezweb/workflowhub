@@ -53,7 +53,7 @@ export type ResponseType = 'toast' | 'modal' | 'redirect' | 'html';
 
 export interface AppearanceSettings {
   buttonIcon?: string; // Emoji for the submit button
-  colorTheme?: 'ocean' | 'forest' | 'sunset' | 'berry' | 'rose' | 'slate' | 'emerald' | 'amber' | 'indigo';
+  colorTheme?: 'default' | 'ocean' | 'forest' | 'sunset' | 'berry' | 'rose' | 'slate' | 'emerald' | 'amber' | 'indigo';
   buttonStyle?: 'solid' | 'gradient';
   buttonFullWidth?: boolean;
   customCss?: string; // Optional advanced customization

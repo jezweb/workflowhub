@@ -233,11 +233,11 @@ export function FormPreview({ name, description, fields, settings }: FormPreview
             type="submit" 
             className={`${
               settings.appearanceSettings?.buttonStyle === 'gradient' && 
-              COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
-                ? COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate'].gradient
-                : COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate']?.background || ''
+              COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default'].gradient
+                ? COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default'].gradient
+                : COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default']?.background || ''
             } ${
-              COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'slate']?.text || ''
+              COLOR_THEMES[settings.appearanceSettings?.colorTheme || 'default']?.text || ''
             } ${
               settings.appearanceSettings?.buttonFullWidth ? 'w-full' : 'w-full sm:w-auto'
             }`}

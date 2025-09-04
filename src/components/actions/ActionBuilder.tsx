@@ -255,7 +255,7 @@ export function ActionBuilder({ action, onSave, onCancel }: ActionBuilderProps) 
               <div className="space-y-2">
                 <Label htmlFor="color_theme">Color Theme</Label>
                 <Select
-                  value={formData.color_theme}
+                  value={formData.color_theme || 'default'}
                   onValueChange={(value: ColorTheme) => updateFormData({ color_theme: value })}
                 >
                   <SelectTrigger id="color_theme">
@@ -316,10 +316,10 @@ export function ActionBuilder({ action, onSave, onCancel }: ActionBuilderProps) 
                 <div className="flex gap-4">
                   <Button
                     className={`${
-                      formData.button_style === 'gradient' && COLOR_THEMES[formData.color_theme || 'slate'].gradient
-                        ? COLOR_THEMES[formData.color_theme || 'slate'].gradient
-                        : COLOR_THEMES[formData.color_theme || 'slate'].background
-                    } ${COLOR_THEMES[formData.color_theme || 'slate'].text}`}
+                      formData.button_style === 'gradient' && COLOR_THEMES[formData.color_theme || 'default'].gradient
+                        ? COLOR_THEMES[formData.color_theme || 'default'].gradient
+                        : COLOR_THEMES[formData.color_theme || 'default'].background
+                    } ${COLOR_THEMES[formData.color_theme || 'default'].text}`}
                   >
                     <span className="mr-2">{formData.icon || '⚡'}</span>
                     {formData.name || 'Action Button'}
