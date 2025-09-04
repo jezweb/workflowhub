@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { variableService } from '../services/variables';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -145,6 +146,19 @@ app.post('/forms/:id/submit', async (c) => {
   // Execute webhook if configured
   if (formSettings?.webhookUrl) {
     try {
+      // Get form creator's variables for substitution
+      // Note: form.created_by contains the user ID who created the form
+      const variables = await variableService.getAllVariables({
+        userId: form.created_by as string,
+        db: c.env.DB
+      });
+      
+      // Substitute variables in webhook URL
+      const substitutedWebhookUrl = variableService.substituteVariables(
+        formSettings.webhookUrl,
+        variables
+      );
+      
       // Prepare webhook payload
       const webhookPayload = {
         form: {
@@ -160,13 +174,16 @@ app.post('/forms/:id/submit', async (c) => {
         }
       };
       
+      // Substitute variables in webhook payload
+      const substitutedPayload = variableService.substituteInObject(webhookPayload, variables);
+      
       // Execute webhook (fire and forget for async behavior)
-      const webhookPromise = fetch(formSettings.webhookUrl, {
+      const webhookPromise = fetch(substitutedWebhookUrl, {
         method: formSettings.webhookMethod || 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(webhookPayload),
+        body: JSON.stringify(substitutedPayload),
       }).then(async (response) => {
         const duration = Date.now() - startTime;
         const responseText = await response.text();

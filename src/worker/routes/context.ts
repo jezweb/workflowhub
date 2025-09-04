@@ -29,10 +29,10 @@ app.get('/organization', async (c) => {
       }
     }
 
-    return c.json({ success: true, organization: org || null });
+    return c.json({ organization: org || null });
   } catch (error) {
     console.error('Error fetching organization:', error);
-    return c.json({ success: false, error: 'Failed to fetch organization' }, 500);
+    return c.json({ error: 'Failed to fetch organization' }, 500);
   }
 });
 
@@ -103,7 +103,7 @@ app.put('/organization', async (c) => {
     return c.json({ success: true });
   } catch (error) {
     console.error('Error updating organization:', error);
-    return c.json({ success: false, error: 'Failed to update organization' }, 500);
+    return c.json({ error: 'Failed to update organization' }, 500);
   }
 });
 
@@ -137,7 +137,7 @@ app.get('/team', async (c) => {
     return profile;
   });
 
-  return c.json({ success: true, profiles: parsedProfiles });
+  return c.json({ profiles: parsedProfiles });
 });
 
 // Get current user's team profile
@@ -171,7 +171,7 @@ app.get('/team/me', async (c) => {
     }
   }
 
-  return c.json({ success: true, profile: profile || null });
+  return c.json({ profile: profile || null });
 });
 
 // Create or update team profile
@@ -282,7 +282,7 @@ app.get('/variables', async (c) => {
     display_value: v.is_sensitive ? '••••••••' : v.value
   }));
 
-  return c.json({ success: true, variables: maskedVariables });
+  return c.json({ variables: maskedVariables });
 });
 
 // Create or update custom variable
@@ -418,7 +418,6 @@ app.get('/variables/available', async (c) => {
   });
 
   return c.json({ 
-    success: true, 
     variables,
     grouped,
     total: Object.keys(variables).length

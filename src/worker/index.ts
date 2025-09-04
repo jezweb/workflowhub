@@ -1,6 +1,5 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { jwt } from 'hono/jwt';
 import type { Env } from './types';
 
 // Import routes
@@ -28,12 +27,27 @@ app.use('*', cors({
 app.route('/api/auth', authRoutes);
 app.route('/api/public', publicRoutes);
 
-// Create a middleware that dynamically gets JWT secret
+// Create a middleware that properly handles JWT with environment variables
 const authMiddleware = async (c: any, next: any) => {
-  const jwtMiddleware = jwt({
-    secret: c.env.JWT_SECRET || 'change-this-in-production',
-  });
-  return jwtMiddleware(c, next);
+  // Get the JWT secret from environment
+  const secret = c.env.JWT_SECRET || 'change-this-in-production';
+  
+  // Manually verify the JWT token
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  
+  const token = authHeader.substring(7);
+  
+  try {
+    const { verify } = await import('hono/jwt');
+    const payload = await verify(token, secret);
+    c.set('jwtPayload', payload);
+    await next();
+  } catch (error) {
+    return c.json({ error: 'Invalid token' }, 401);
+  }
 };
 
 // Apply auth middleware to protected routes

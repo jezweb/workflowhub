@@ -64,7 +64,8 @@ export class VariableService {
       '{{org.website}}': org.website as string || '',
       '{{org.email}}': org.email as string || '',
       '{{org.phone}}': org.phone as string || '',
-      '{{org.address}}': org.address as string || ''
+      '{{org.address}}': org.address as string || '',
+      '{{org.context}}': org.context_text as string || ''
     };
 
     // Parse social links if they exist
@@ -101,6 +102,27 @@ export class VariableService {
       variables['{{team.current.phone}}'] = currentProfile.phone as string || '';
       variables['{{team.current.mobile}}'] = currentProfile.mobile as string || '';
       variables['{{team.current.email}}'] = currentProfile.email as string || '';
+      variables['{{team.current.bio}}'] = currentProfile.bio as string || '';
+      
+      // Add skills as variables
+      if (currentProfile.skills) {
+        try {
+          const skills = JSON.parse(currentProfile.skills as string);
+          if (Array.isArray(skills)) {
+            // Add all skills as comma-separated list
+            variables['{{team.current.skills}}'] = skills.join(', ');
+            // Add individual skill access
+            skills.forEach((skill: string, index: number) => {
+              variables[`{{team.current.skill.${index}}}`] = skill;
+            });
+          }
+        } catch (e) {
+          // Invalid JSON or not an array, skip skills
+          variables['{{team.current.skills}}'] = '';
+        }
+      } else {
+        variables['{{team.current.skills}}'] = '';
+      }
     }
 
     // Get all team members for reference (limited to avoid too many variables)

@@ -243,6 +243,77 @@ export function OrganizationSettings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Available Variables</CardTitle>
+          <CardDescription>
+            These variables can be used in forms, actions, and agents
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 font-mono text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.name}}"}</span>
+              <span>{formData.name || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.description}}"}</span>
+              <span className="truncate max-w-xs">{formData.description || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.website}}"}</span>
+              <span>{formData.website || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.email}}"}</span>
+              <span>{formData.email || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.phone}}"}</span>
+              <span>{formData.phone || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.address}}"}</span>
+              <span className="truncate max-w-xs">{formData.address || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.context}}"}</span>
+              <span className="truncate max-w-xs">{formData.context_text || '(not set)'}</span>
+            </div>
+            {formData.social_links?.twitter && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{"{{org.social.twitter}}"}</span>
+                <span className="truncate max-w-xs">{formData.social_links.twitter}</span>
+              </div>
+            )}
+            {formData.social_links?.linkedin && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{"{{org.social.linkedin}}"}</span>
+                <span className="truncate max-w-xs">{formData.social_links.linkedin}</span>
+              </div>
+            )}
+            {formData.social_links?.facebook && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{"{{org.social.facebook}}"}</span>
+                <span className="truncate max-w-xs">{formData.social_links.facebook}</span>
+              </div>
+            )}
+            {formData.social_links?.instagram && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{"{{org.social.instagram}}"}</span>
+                <span className="truncate max-w-xs">{formData.social_links.instagram}</span>
+              </div>
+            )}
+            {formData.social_links?.github && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{"{{org.social.github}}"}</span>
+                <span className="truncate max-w-xs">{formData.social_links.github}</span>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-end">
         <Button type="submit" disabled={saving}>
           {saving ? 'Saving...' : 'Save Organization Settings'}

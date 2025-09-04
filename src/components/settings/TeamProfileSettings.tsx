@@ -246,6 +246,14 @@ export function TeamProfileSettings() {
               <span className="text-muted-foreground">{"{{team.current.mobile}}"}</span>
               <span>{profile.mobile || '(not set)'}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{team.current.bio}}"}</span>
+              <span className="truncate max-w-xs">{profile.bio || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{team.current.skills}}"}</span>
+              <span className="truncate max-w-xs">{profile.skills?.join(', ') || '(not set)'}</span>
+            </div>
           </div>
         </CardContent>
       </Card>

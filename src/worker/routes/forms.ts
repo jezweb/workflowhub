@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { variableService } from '../services/variables';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -320,11 +321,12 @@ app.post('/:id/submit', async (c) => {
   }
   
   const submissionId = crypto.randomUUID();
+  const startTime = Date.now();
   
   await c.env.DB
     .prepare(`
-      INSERT INTO form_submissions (id, form_id, data, submitted_by, ip_address, webhook_status)
-      VALUES (?, ?, ?, ?, ?, 'pending')
+      INSERT INTO form_submissions (id, form_id, data, submitted_by, ip_address, webhook_status, created_at)
+      VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))
     `)
     .bind(
       submissionId,
@@ -335,7 +337,105 @@ app.post('/:id/submit', async (c) => {
     )
     .run();
   
-  // TODO: Execute webhook if configured (similar to public endpoint)
+  // Parse form settings
+  const formSettings = typeof form.settings === 'string' ? JSON.parse(form.settings) : form.settings;
+  
+  // Execute webhook if configured
+  if (formSettings?.webhookUrl) {
+    try {
+      // Get current user's variables for substitution (or form creator's if different)
+      const variableUserId = userId || (form.created_by as string);
+      const variables = await variableService.getAllVariables({
+        userId: variableUserId,
+        db: c.env.DB
+      });
+      
+      // Substitute variables in webhook URL
+      const substitutedWebhookUrl = variableService.substituteVariables(
+        formSettings.webhookUrl,
+        variables
+      );
+      
+      // Prepare webhook payload
+      const webhookPayload = {
+        form: {
+          id: form.id,
+          name: form.name,
+        },
+        submission: {
+          id: submissionId,
+          data: body.data,
+          submitted_at: new Date().toISOString(),
+          submitted_by: userId,
+          ip_address: c.req.header('CF-Connecting-IP') || null,
+        }
+      };
+      
+      // Substitute variables in webhook payload
+      const substitutedPayload = variableService.substituteInObject(webhookPayload, variables);
+      
+      // Execute webhook (fire and forget for async behavior)
+      const webhookPromise = fetch(substitutedWebhookUrl, {
+        method: formSettings.webhookMethod || 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(substitutedPayload),
+      }).then(async (response) => {
+        const duration = Date.now() - startTime;
+        const responseText = await response.text();
+        
+        // Update submission with webhook response
+        await c.env.DB
+          .prepare(`
+            UPDATE form_submissions 
+            SET webhook_status = ?, 
+                webhook_response = ?, 
+                webhook_response_code = ?,
+                webhook_executed_at = datetime('now'),
+                webhook_duration_ms = ?
+            WHERE id = ?
+          `)
+          .bind(
+            response.ok ? 'success' : 'error',
+            responseText.substring(0, 10000), // Limit response size
+            response.status,
+            duration,
+            submissionId
+          )
+          .run();
+          
+        return response;
+      }).catch(async (error) => {
+        const duration = Date.now() - startTime;
+        
+        // Update submission with error
+        await c.env.DB
+          .prepare(`
+            UPDATE form_submissions 
+            SET webhook_status = 'error', 
+                webhook_response = ?, 
+                webhook_executed_at = datetime('now'),
+                webhook_duration_ms = ?
+            WHERE id = ?
+          `)
+          .bind(
+            error.message || 'Webhook execution failed',
+            duration,
+            submissionId
+          )
+          .run();
+          
+        throw error;
+      });
+      
+      // Don't wait for webhook completion
+      c.executionCtx.waitUntil(webhookPromise);
+    } catch (error) {
+      console.error('Webhook setup error:', error);
+      // Continue even if webhook setup fails
+    }
+  }
   
   return c.json({ success: true, id: submissionId });
 });
