@@ -30,6 +30,18 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 - Upload progress tracking with status indicators
 - File metadata display (size, type, upload date)
 
+### 🗄️ Storage Management (v2.5.0)
+- **Multi-Bucket Support** - Manage multiple storage buckets
+- **Provider Flexibility** - Support for Cloudflare R2 and Amazon S3
+- **S3-Compatible Services** - Works with MinIO, Backblaze B2, etc.
+- **Context-Aware Storage** - Different buckets for different purposes
+- **Bucket Assignment** - Assign buckets to chat groups and forms
+- **Connection Testing** - Verify bucket connectivity before use
+- **Secure Credentials** - Encrypted storage of access keys in D1
+- **Default Buckets** - Configure defaults for general, chat, and forms
+- **R2 Bindings** - Native Cloudflare R2 integration with bindings
+- **S3 API Support** - Full S3 API compatibility with aws4fetch
+
 ### 💬 Chat System
 - **Conversation Groups** - Organize chats by project/topic with custom icons and colors
 - **Agent Integration** - Each group uses a specific AI agent with shared context

@@ -423,6 +423,21 @@ CREATE TABLE custom_variables (
   updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(category, key, user_id)
 );
+
+-- Storage buckets configuration
+CREATE TABLE storage_buckets (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name TEXT NOT NULL UNIQUE,
+  description TEXT,
+  provider TEXT NOT NULL DEFAULT 'r2' CHECK(provider IN ('r2', 's3')),
+  is_default BOOLEAN DEFAULT FALSE,
+  is_default_chat BOOLEAN DEFAULT FALSE,
+  is_default_forms BOOLEAN DEFAULT FALSE,
+  config_json TEXT NOT NULL, -- Encrypted JSON with provider-specific config
+  created_by TEXT REFERENCES users(id),
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ## API Design
@@ -462,6 +477,25 @@ POST   /api/files/upload     - Upload file(s) (4MB limit)
 GET    /api/files/:id/download - Download file (authenticated)
 GET    /api/files/:id/url    - Get file URL
 DELETE /api/files/:id        - Delete file
+```
+
+### Storage API
+```
+# Bucket Management
+GET    /api/storage/buckets           - List all storage buckets
+POST   /api/storage/buckets           - Create new storage bucket
+GET    /api/storage/buckets/:id       - Get bucket details
+PUT    /api/storage/buckets/:id       - Update bucket configuration
+DELETE /api/storage/buckets/:id       - Delete bucket
+
+# Bucket Operations
+POST   /api/storage/buckets/:id/test  - Test bucket connection
+POST   /api/storage/buckets/:id/set-default - Set as default bucket
+
+# Provider Support
+- Cloudflare R2 (with bindings or API)
+- Amazon S3 and S3-compatible (MinIO, Backblaze B2)
+- Encrypted credential storage in D1
 ```
 
 ### Database API
