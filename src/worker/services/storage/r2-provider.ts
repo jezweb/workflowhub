@@ -12,10 +12,10 @@ import type {
 
 export class R2Provider implements StorageProvider {
   private bucket: any = null;
-  private config: R2Config;
+  private _config: R2Config;
 
   constructor(config: R2Config, bucket?: any) {
-    this.config = config;
+    this._config = config;
     if (config.use_binding && bucket) {
       this.bucket = bucket;
     }
@@ -32,8 +32,8 @@ export class R2Provider implements StorageProvider {
     }
 
     // For non-binding mode, we would need to use the S3-compatible API
-    // This requires the AWS SDK or manual signing
-    throw new Error('R2 API access without bindings not yet implemented. Use bindings for now.');
+    // This requires the AWS SDK or manual signing with this._config credentials
+    throw new Error(`R2 API access without bindings not yet implemented for bucket: ${this._config.bucket_name}. Use bindings for now.`);
   }
 
   async upload(
