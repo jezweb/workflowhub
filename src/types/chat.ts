@@ -11,6 +11,7 @@ export interface ConversationGroup {
   color?: string;  // Theme color
   shared_context?: string;  // Persistent instructions for agent
   shared_variables?: Record<string, any>;  // Variables available to all chats
+  bucket_id?: string;  // Storage bucket for attachments
   position: number;
   is_archived: boolean;
   is_pinned: boolean;

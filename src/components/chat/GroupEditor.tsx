@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
+import { BucketSelector } from '@/components/storage/BucketSelector';
 import useChatStore from '@/stores/chatStore';
 import { GROUP_COLORS, GROUP_ICONS } from '@/types/chat';
 import type { Agent } from '@/types/agent';
@@ -29,6 +30,7 @@ export default function GroupEditor({ group, agents, onClose, onSave }: GroupEdi
     icon: group?.icon || '💬',
     color: group?.color || '#6b7280',
     shared_context: group?.shared_context || '',
+    bucket_id: group?.bucket_id || '',
     is_pinned: group?.is_pinned || false,
   });
   
@@ -196,6 +198,15 @@ export default function GroupEditor({ group, agents, onClose, onSave }: GroupEdi
               This context will be included with every message in this group
             </p>
           </div>
+          
+          {/* Storage Bucket */}
+          <BucketSelector
+            value={formData.bucket_id}
+            onChange={(bucketId) => setFormData({ ...formData, bucket_id: bucketId })}
+            context="chat"
+            label="Storage Bucket for Attachments"
+            description="Files attached to conversations in this group will be stored in the selected bucket"
+          />
           
           {/* Pin Group */}
           <div className="flex items-center justify-between">

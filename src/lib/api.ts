@@ -236,13 +236,20 @@ export const databaseApi = {
 
 // Files API
 export const filesApi = {
-  list: () => apiRequest('/files'),
+  list: (params?: { bucket_id?: string }) => {
+    const query = params?.bucket_id ? `?bucket_id=${params.bucket_id}` : '';
+    return apiRequest(`/files${query}`);
+  },
   
-  upload: async (files: File[]) => {
+  upload: async (files: File[], bucketId?: string) => {
     const formData = new FormData();
     files.forEach((file, index) => {
       formData.append(`file-${index}`, file);
     });
+    
+    if (bucketId) {
+      formData.append('bucket_id', bucketId);
+    }
     
     const token = localStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/files/upload`, {

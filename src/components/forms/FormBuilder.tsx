@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BucketSelector } from '@/components/storage/BucketSelector';
 import type { FormField, FieldType, Form, FormSettings } from '@/types/form';
 import { FieldEditor } from './FieldEditor';
 import { FormPreview } from './FormPreview';
@@ -406,15 +407,13 @@ export function FormBuilder({ form, onSave }: FormBuilderProps) {
                   </p>
                 </div>
               )}
-              <div>
-                <Label htmlFor="r2Bucket">R2 Bucket for file uploads (optional)</Label>
-                <Input
-                  id="r2Bucket"
-                  value={settings.r2Bucket || ''}
-                  onChange={(e) => setSettings({ ...settings, r2Bucket: e.target.value })}
-                  placeholder="my-bucket-name"
-                />
-              </div>
+              <BucketSelector
+                value={settings.bucketId}
+                onChange={(bucketId) => setSettings({ ...settings, bucketId })}
+                context="forms"
+                label="Storage Bucket for File Uploads"
+                description="Files uploaded through this form will be stored in the selected bucket"
+              />
             </CardContent>
           </Card>
         </TabsContent>

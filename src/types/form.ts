@@ -67,6 +67,7 @@ export interface FormSettings {
   webhookMethod?: 'GET' | 'POST' | 'PUT';
   emailNotification?: string;
   responseType?: ResponseType;
+  bucketId?: string; // Storage bucket for file uploads
   r2Bucket?: string;
   turnstileEnabled?: boolean;
   turnstileSiteKey?: string;

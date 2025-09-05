@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
+import { StorageFactory } from '../services/storage';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -8,10 +9,21 @@ const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB default for AutoRAG
 // List files
 app.get('/', async (c) => {
   const userId = c.get('jwtPayload').sub;
+  const bucketId = c.req.query('bucket_id');
+  
+  let query = 'SELECT * FROM files WHERE uploaded_by = ?';
+  const params = [userId];
+  
+  if (bucketId) {
+    query += ' AND bucket_id = ?';
+    params.push(bucketId);
+  }
+  
+  query += ' ORDER BY created_at DESC';
   
   const files = await c.env.DB
-    .prepare('SELECT * FROM files WHERE uploaded_by = ? ORDER BY created_at DESC')
-    .bind(userId)
+    .prepare(query)
+    .bind(...params)
     .all();
   
   // For now, we'll use direct download URLs
@@ -31,6 +43,16 @@ app.post('/upload', async (c) => {
   try {
     const formData = await c.req.formData();
     const uploadResults = [];
+    
+    // Get bucket_id from form data or use default
+    let bucketId = formData.get('bucket_id') as string;
+    if (!bucketId) {
+      // Use default bucket if none specified
+      const defaultBucket = await c.env.DB
+        .prepare('SELECT id FROM storage_buckets WHERE is_default = TRUE LIMIT 1')
+        .first();
+      bucketId = (defaultBucket?.id as string) || 'default-r2-bucket';
+    }
     
     // Process each file in the form data
     for (const [, value] of formData.entries()) {
@@ -54,24 +76,30 @@ app.post('/upload', async (c) => {
         const r2Key = `${userId}/${timestamp}-${random}-${safeName}`;
         
         try {
-          // Upload to R2
+          // Get storage provider for the bucket
+          const bucket = await StorageFactory.getBucket(c.env, bucketId);
+          if (!bucket) {
+            throw new Error('Storage bucket not found');
+          }
+          
+          const provider = StorageFactory.createProvider(bucket, c.env);
+          
+          // Upload to storage provider
           const arrayBuffer = await file.arrayBuffer();
-          await c.env.STORAGE.put(r2Key, arrayBuffer, {
-            httpMetadata: {
-              contentType: file.type || 'application/octet-stream',
-            },
-            customMetadata: {
+          await provider.upload(r2Key, arrayBuffer, {
+            contentType: file.type || 'application/octet-stream',
+            metadata: {
               uploadedBy: userId,
               originalName: file.name,
             }
           });
           
-          // Save metadata to D1
+          // Save metadata to D1 with bucket_id
           const fileId = crypto.randomUUID();
           await c.env.DB
             .prepare(`
-              INSERT INTO files (id, name, size, mime_type, r2_key, uploaded_by)
-              VALUES (?, ?, ?, ?, ?, ?)
+              INSERT INTO files (id, name, size, mime_type, r2_key, uploaded_by, bucket_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?)
             `)
             .bind(
               fileId,
@@ -79,7 +107,8 @@ app.post('/upload', async (c) => {
               file.size,
               file.type || 'application/octet-stream',
               r2Key,
-              userId
+              userId,
+              bucketId
             )
             .run();
           
@@ -127,19 +156,27 @@ app.get('/:id/download', async (c) => {
       return c.json({ error: 'File not found' }, 404);
     }
     
-    // Get file from R2
-    const object = await c.env.STORAGE.get(file.r2_key as string);
+    // Get storage provider for file's bucket
+    const bucketId = (file.bucket_id as string) || 'default-r2-bucket';
+    const bucket = await StorageFactory.getBucket(c.env, bucketId);
+    if (!bucket) {
+      return c.json({ error: 'Storage bucket not found' }, 404);
+    }
     
-    if (!object) {
+    const provider = StorageFactory.createProvider(bucket, c.env);
+    
+    // Get file from storage provider
+    const response = await provider.download(file.r2_key as string);
+    
+    if (response.status === 404) {
       return c.json({ error: 'File not found in storage' }, 404);
     }
     
-    // Stream the file
-    const headers = new Headers();
-    headers.set('Content-Type', file.mime_type as string);
+    // Stream the file with proper headers
+    const headers = new Headers(response.headers);
     headers.set('Content-Disposition', `attachment; filename="${file.name}"`);
     
-    return new Response(object.body, { headers });
+    return new Response(response.body, { headers });
   } catch (error) {
     console.error('Download error:', error);
     return c.json({ error: 'Download failed' }, 500);
@@ -188,8 +225,13 @@ app.delete('/:id', async (c) => {
       return c.json({ error: 'File not found' }, 404);
     }
     
-    // Delete from R2
-    await c.env.STORAGE.delete(file.r2_key as string);
+    // Get storage provider and delete from storage
+    const bucketId = (file.bucket_id as string) || 'default-r2-bucket';
+    const bucket = await StorageFactory.getBucket(c.env, bucketId);
+    if (bucket) {
+      const provider = StorageFactory.createProvider(bucket, c.env);
+      await provider.delete(file.r2_key as string);
+    }
     
     // Delete from database
     await c.env.DB

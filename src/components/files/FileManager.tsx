@@ -14,8 +14,11 @@ import { filesApi } from '@/lib/api';
 import { DropZone } from './DropZone';
 import { FileGrid } from './FileGrid';
 import { FileTable } from './FileTable';
+import { BucketSelector } from '@/components/storage/BucketSelector';
 import { formatFileSize } from '@/types/file';
 import type { FileRecord, ViewMode, FileUploadProgress } from '@/types/file';
+
+const BUCKET_STORAGE_KEY = 'selectedBucketId';
 
 export function FileManager() {
   const [files, setFiles] = useState<FileRecord[]>([]);
@@ -23,15 +26,32 @@ export function FileManager() {
   const [isLoading, setIsLoading] = useState(true);
   const [showDropZone, setShowDropZone] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress[]>([]);
+  const [selectedBucket, setSelectedBucket] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
-    loadFiles();
+    // Load saved bucket from localStorage
+    const savedBucket = localStorage.getItem(BUCKET_STORAGE_KEY);
+    if (savedBucket) {
+      setSelectedBucket(savedBucket);
+    }
   }, []);
+
+  useEffect(() => {
+    if (selectedBucket || selectedBucket === '') {
+      loadFiles();
+    }
+  }, [selectedBucket]);
+
+  const handleBucketChange = (bucketId: string) => {
+    setSelectedBucket(bucketId);
+    localStorage.setItem(BUCKET_STORAGE_KEY, bucketId);
+  };
 
   const loadFiles = async () => {
     try {
-      const response = await filesApi.list();
+      const params = selectedBucket ? { bucket_id: selectedBucket } : {};
+      const response = await filesApi.list(params);
       setFiles(response.files || []);
     } catch (error) {
       console.error('Failed to load files:', error);
@@ -55,9 +75,9 @@ export function FileManager() {
     setUploadProgress(newProgress);
     setShowDropZone(false);
 
-    // Upload files
+    // Upload files with bucket_id
     try {
-      const response = await filesApi.upload(selectedFiles);
+      const response = await filesApi.upload(selectedFiles, selectedBucket);
       
       // Update progress to complete
       setUploadProgress(prev => prev.map(p => ({
@@ -185,6 +205,19 @@ export function FileManager() {
 
   return (
     <div className="space-y-4">
+      {/* Bucket Selector */}
+      <Card>
+        <CardContent className="pt-6">
+          <BucketSelector
+            value={selectedBucket}
+            onChange={handleBucketChange}
+            context="general"
+            label="Storage Bucket"
+            description="Select the storage bucket to view and upload files"
+          />
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
