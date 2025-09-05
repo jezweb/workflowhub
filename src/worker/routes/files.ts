@@ -193,16 +193,27 @@ app.get('/:id/url', async (c) => {
     const file = await c.env.DB
       .prepare('SELECT * FROM files WHERE id = ? AND uploaded_by = ?')
       .bind(fileId, userId)
-      .first();
+      .first() as any;
     
     if (!file) {
       return c.json({ error: 'File not found' }, 404);
     }
     
-    // Return direct download URL
+    // Return direct download URL and file metadata for chat attachments
     const url = `/api/files/${fileId}/download`;
     
-    return c.json({ success: true, url });
+    return c.json({ 
+      success: true, 
+      url,
+      file: {
+        id: file.id,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        bucket_id: file.bucket_id,
+        storage_key: file.r2_key || file.storage_key
+      }
+    });
   } catch (error) {
     console.error('URL generation error:', error);
     return c.json({ error: 'Failed to generate URL' }, 500);

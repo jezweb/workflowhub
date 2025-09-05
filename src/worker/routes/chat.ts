@@ -488,6 +488,22 @@ app.post('/conversations/:id/messages', async (c) => {
       }
     }
     
+    // Process attachments to generate URLs for storage references
+    let processedAttachments = body.attachments;
+    if (body.attachments && body.attachments.length > 0) {
+      processedAttachments = await Promise.all(body.attachments.map(async (att: any) => {
+        if (att.is_storage_ref && att.storage_file_id) {
+          // Generate URL for storage file
+          const url = `/api/files/${att.storage_file_id}/download`;
+          return {
+            ...att,
+            url
+          };
+        }
+        return att;
+      }));
+    }
+    
     // Build webhook request body
     const webhookRequest: ChatWebhookRequest = {
       message: body.message,
@@ -500,7 +516,7 @@ app.post('/conversations/:id/messages', async (c) => {
         temperature: conversation.temperature,
         max_tokens: conversation.max_tokens,
       },
-      attachments: body.attachments,
+      attachments: processedAttachments,
       metadata: body.metadata || {},
     };
     

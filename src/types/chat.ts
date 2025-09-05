@@ -65,6 +65,12 @@ export interface ChatAttachment {
   size: number;
   url?: string;  // For R2 stored files
   data?: string;  // Base64 for small files
+  
+  // Storage reference fields
+  storage_file_id?: string;  // ID of file in storage
+  bucket_id?: string;  // Bucket containing the file
+  storage_key?: string;  // Storage key/path
+  is_storage_ref?: boolean;  // Flag to identify storage attachments
 }
 
 // Request/Response types for API

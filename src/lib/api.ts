@@ -272,6 +272,8 @@ export const filesApi = {
     apiRequest(`/files/${id}`, {
       method: 'DELETE',
     }),
+  
+  getUrl: (id: string) => apiRequest(`/files/${id}/url`),
 };
 
 // Settings API

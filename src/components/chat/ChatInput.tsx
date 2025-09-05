@@ -1,19 +1,23 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, X } from 'lucide-react';
+import { Send, Paperclip, X, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import useChatStore from '@/stores/chatStore';
+import { FileBrowserModal } from './FileBrowserModal';
 import type { ChatAttachment } from '@/types/chat';
 
 interface ChatInputProps {
   conversationId: string;
+  groupBucketId?: string;  // Default bucket from group settings
 }
 
-export default function ChatInput({ conversationId }: ChatInputProps) {
+export default function ChatInput({ conversationId, groupBucketId }: ChatInputProps) {
   const { sendMessage, sendingMessage } = useChatStore();
   const [message, setMessage] = useState('');
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
+  const [showFileBrowser, setShowFileBrowser] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -28,8 +32,11 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     const trimmedMessage = message.trim();
     if (!trimmedMessage && attachments.length === 0) return;
     
+    // Combine all attachments (uploaded + storage references)
+    const allAttachments = [...attachments];
+    
     // Send message
-    await sendMessage(conversationId, trimmedMessage, attachments);
+    await sendMessage(conversationId, trimmedMessage, allAttachments);
     
     // Clear input
     setMessage('');
@@ -67,6 +74,11 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
     }
   };
   
+  const handleStorageSelect = (storageAttachments: ChatAttachment[]) => {
+    // Add storage attachments to the list
+    setAttachments([...attachments, ...storageAttachments]);
+  };
+  
   const removeAttachment = (id: string) => {
     setAttachments(attachments.filter(a => a.id !== id));
   };
@@ -77,8 +89,12 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
       {attachments.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {attachments.map(attachment => (
-            <Badge key={attachment.id} variant="secondary" className="pr-1">
-              <Paperclip className="h-3 w-3 mr-1" />
+            <Badge key={attachment.id} variant={attachment.is_storage_ref ? "outline" : "secondary"} className="pr-1">
+              {attachment.is_storage_ref ? (
+                <FolderOpen className="h-3 w-3 mr-1" />
+              ) : (
+                <Paperclip className="h-3 w-3 mr-1" />
+              )}
               <span className="text-xs">{attachment.name}</span>
               <Button
                 size="sm"
@@ -106,17 +122,48 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
             className="min-h-[80px] max-h-[200px] pr-10 resize-none"
           />
           
-          {/* Attachment Button */}
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            className="absolute bottom-2 right-2 h-8 w-8 p-0"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={sendingMessage}
-          >
-            <Paperclip className="h-4 w-4" />
-          </Button>
+          {/* Attachment Buttons */}
+          <div className="absolute bottom-2 right-2 flex gap-1">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => setShowFileBrowser(true)}
+                    disabled={sendingMessage}
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Attach from Storage</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 w-8 p-0"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sendingMessage}
+                  >
+                    <Paperclip className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Upload Files</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           
           <input
             ref={fileInputRef}
@@ -141,6 +188,15 @@ export default function ChatInput({ conversationId }: ChatInputProps) {
       <p className="text-xs text-muted-foreground">
         Press Enter to send, Shift+Enter for new line
       </p>
+      
+      {/* File Browser Modal */}
+      <FileBrowserModal
+        open={showFileBrowser}
+        onClose={() => setShowFileBrowser(false)}
+        onSelect={handleStorageSelect}
+        defaultBucketId={groupBucketId}
+        multiple={true}
+      />
     </div>
   );
 }

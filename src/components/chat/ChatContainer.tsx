@@ -179,7 +179,10 @@ export default function ChatContainer() {
                 
                 {/* Input */}
                 <div className="border-t p-4">
-                  <ChatInput conversationId={activeConversation.id} />
+                  <ChatInput 
+                    conversationId={activeConversation.id}
+                    groupBucketId={activeGroup?.bucket_id}
+                  />
                 </div>
               </>
             ) : (
