@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { storageApi } from '@/lib/api';
 import type { StorageBucket, CreateBucketInput, R2Config, S3Config } from '@/types/storage';
 
 interface BucketFormProps {
@@ -51,6 +52,53 @@ export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
     s3_endpoint: '',
     s3_force_path_style: false,
   });
+  
+  const [loading, setLoading] = useState(false);
+
+  // Fetch full bucket config when editing
+  useEffect(() => {
+    if (bucket?.id) {
+      setLoading(true);
+      storageApi.getBucketWithConfig(bucket.id)
+        .then((response) => {
+          if (response.success && response.bucket) {
+            const bucketData = response.bucket;
+            const config = bucketData.config || {};
+            
+            setFormData(prev => ({
+              ...prev,
+              name: bucketData.name || '',
+              description: bucketData.description || '',
+              provider: bucketData.provider || 'r2',
+              is_default: bucketData.is_default || false,
+              is_default_chat: bucketData.is_default_chat || false,
+              is_default_forms: bucketData.is_default_forms || false,
+              
+              // R2 Config
+              r2_bucket_name: bucketData.provider === 'r2' ? (config.bucket_name || '') : prev.r2_bucket_name,
+              r2_use_binding: bucketData.provider === 'r2' ? (config.use_binding ?? true) : prev.r2_use_binding,
+              r2_account_id: bucketData.provider === 'r2' ? (config.account_id || '') : prev.r2_account_id,
+              r2_access_key_id: bucketData.provider === 'r2' ? (config.access_key_id || '') : prev.r2_access_key_id,
+              r2_secret_access_key: bucketData.provider === 'r2' ? (config.secret_access_key || '') : prev.r2_secret_access_key,
+              
+              // S3 Config
+              s3_bucket_name: bucketData.provider === 's3' ? (config.bucket_name || '') : prev.s3_bucket_name,
+              s3_region: bucketData.provider === 's3' ? (config.region || 'us-east-1') : prev.s3_region,
+              s3_access_key_id: bucketData.provider === 's3' ? (config.access_key_id || '') : prev.s3_access_key_id,
+              s3_secret_access_key: bucketData.provider === 's3' ? (config.secret_access_key || '') : prev.s3_secret_access_key,
+              s3_endpoint: bucketData.provider === 's3' ? (config.endpoint || '') : prev.s3_endpoint,
+              s3_force_path_style: bucketData.provider === 's3' ? (config.force_path_style || false) : prev.s3_force_path_style,
+            }));
+          }
+        })
+        .catch((error) => {
+          console.error('Failed to load bucket config:', error);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [bucket?.id]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,8 +364,8 @@ export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">
-              {bucket ? 'Update Bucket' : 'Create Bucket'}
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Loading...' : bucket ? 'Update Bucket' : 'Create Bucket'}
             </Button>
           </DialogFooter>
         </form>

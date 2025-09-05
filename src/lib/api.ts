@@ -332,6 +332,8 @@ export const storageApi = {
   
   getBucket: (id: string) => apiRequest(`/storage/buckets/${id}`),
   
+  getBucketWithConfig: (id: string) => apiRequest(`/storage/buckets/${id}/config`),
+  
   createBucket: (data: {
     name: string;
     description?: string;

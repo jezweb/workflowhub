@@ -29,12 +29,26 @@ export class StorageFactory {
    * Create R2 provider with binding support
    */
   private static createR2Provider(config: R2Config, env: Env): R2Provider {
-    // If using binding and it's the default bucket, use the STORAGE binding
-    if (config.use_binding && config.bucket_name === 'workflowhub-files') {
-      return new R2Provider(config, env.STORAGE);
+    // If using binding, try to use the STORAGE binding
+    if (config.use_binding) {
+      // Check if STORAGE binding is available
+      if (env.STORAGE) {
+        // Note: In the current setup, the STORAGE binding is configured for "workflowhub-files"
+        // If the bucket name matches or if we want to use the binding regardless, use it
+        // You may need to configure multiple R2 bindings in wrangler.toml for different buckets
+        console.log(`Using R2 binding for bucket: ${config.bucket_name}`);
+        return new R2Provider(config, env.STORAGE);
+      } else {
+        console.warn(`R2 binding requested but STORAGE binding not available for bucket: ${config.bucket_name}`);
+        // Fall through to non-binding mode
+      }
     }
     
-    // For other R2 buckets, would need API access (not yet implemented)
+    // For non-binding mode or when binding is not available
+    if (!config.use_binding && (!config.account_id || !config.access_key_id || !config.secret_access_key)) {
+      console.error('R2 configuration incomplete - missing required credentials');
+    }
+    
     return new R2Provider(config);
   }
 

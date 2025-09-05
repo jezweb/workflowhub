@@ -80,6 +80,40 @@ app.get('/buckets/:id', async (c) => {
   }
 });
 
+// Get bucket details with config (for editing)
+app.get('/buckets/:id/config', async (c) => {
+  const bucketId = c.req.param('id');
+  
+  try {
+    const bucket = await c.env.DB
+      .prepare('SELECT * FROM storage_buckets WHERE id = ?')
+      .bind(bucketId)
+      .first();
+
+    if (!bucket) {
+      return c.json({ success: false, error: 'Bucket not found' }, 404);
+    }
+
+    // Parse and include the config for authorized users
+    const bucketData = bucket as any;
+    const config = bucketData.config_json ? StorageFactory.decryptConfig(bucketData.config_json) : {};
+    
+    // Return bucket with parsed config
+    const { config_json, ...bucketInfo } = bucketData;
+    
+    return c.json({ 
+      success: true, 
+      bucket: {
+        ...bucketInfo,
+        config
+      }
+    });
+  } catch (error) {
+    console.error('Failed to get bucket config:', error);
+    return c.json({ success: false, error: 'Failed to get bucket configuration' }, 500);
+  }
+});
+
 // Create new bucket
 app.post('/buckets', async (c) => {
   const userId = c.get('jwtPayload').sub;

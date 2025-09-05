@@ -31,9 +31,24 @@ export class R2Provider implements StorageProvider {
       return this.bucket;
     }
 
+    // Check if we expected to have a binding but don't
+    if (this._config.use_binding) {
+      throw new Error(
+        `R2 bucket binding not available for bucket "${this._config.bucket_name}". ` +
+        `Please either:\n` +
+        `1. Add the R2 bucket binding to your wrangler.toml file\n` +
+        `2. Uncheck "Use Cloudflare binding" and provide access credentials instead`
+      );
+    }
+
     // For non-binding mode, we would need to use the S3-compatible API
     // This requires the AWS SDK or manual signing with this._config credentials
-    throw new Error(`R2 API access without bindings not yet implemented for bucket: ${this._config.bucket_name}. Use bindings for now.`);
+    throw new Error(
+      `Direct R2 API access is not yet implemented. ` +
+      `Please use Cloudflare bindings by:\n` +
+      `1. Adding [[r2_buckets]] binding in wrangler.toml\n` +
+      `2. Enabling "Use Cloudflare binding" in bucket settings`
+    );
   }
 
   async upload(

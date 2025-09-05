@@ -113,8 +113,13 @@ export function BucketSelector({
       )}
       
       <Select
-        value={value || getDefaultForContext() || ''}
-        onValueChange={onChange}
+        value={value || getDefaultForContext() || undefined}
+        onValueChange={(newValue) => {
+          // Only call onChange if we have a valid value
+          if (newValue) {
+            onChange(newValue);
+          }
+        }}
         disabled={isLoading || buckets.length === 0}
       >
         <SelectTrigger>
@@ -133,24 +138,32 @@ export function BucketSelector({
               No storage buckets available
             </div>
           ) : (
-            buckets.map((bucket) => (
-              <SelectItem key={bucket.id} value={bucket.id}>
-                <div className="flex items-center gap-2">
-                  {getProviderIcon(bucket.provider)}
-                  <span>{bucket.name}</span>
-                  {isDefault(bucket) && (
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      Default
-                    </Badge>
-                  )}
-                  {bucket.provider === 's3' && (
-                    <Badge variant="outline" className="ml-1 text-xs">
-                      S3
-                    </Badge>
-                  )}
-                </div>
-              </SelectItem>
-            ))
+            buckets.map((bucket) => {
+              // Skip buckets without valid IDs
+              if (!bucket.id) {
+                console.warn('Bucket without ID found:', bucket);
+                return null;
+              }
+              
+              return (
+                <SelectItem key={bucket.id} value={bucket.id}>
+                  <div className="flex items-center gap-2">
+                    {getProviderIcon(bucket.provider)}
+                    <span>{bucket.name}</span>
+                    {isDefault(bucket) && (
+                      <Badge variant="secondary" className="ml-2 text-xs">
+                        Default
+                      </Badge>
+                    )}
+                    {bucket.provider === 's3' && (
+                      <Badge variant="outline" className="ml-1 text-xs">
+                        S3
+                      </Badge>
+                    )}
+                  </div>
+                </SelectItem>
+              );
+            })
           )}
         </SelectContent>
       </Select>
