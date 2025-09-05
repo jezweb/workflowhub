@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/Login';
 import { DashboardPage } from '@/pages/Dashboard';
 import { FormsPage } from '@/pages/Forms';
 import { FilesPage } from '@/pages/Files';
+import { Storage } from '@/pages/Storage';
 import { DatabasePage } from '@/pages/Database';
 import { ChatPage } from '@/pages/Chat';
 import { ActionsPage } from '@/pages/Actions';
@@ -41,6 +42,7 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/forms" element={<FormsPage />} />
               <Route path="/files" element={<FilesPage />} />
+              <Route path="/storage" element={<Storage />} />
               <Route path="/database" element={<DatabasePage />} />
               <Route path="/agents" element={<AgentsPage />} />
               <Route path="/chat" element={<ChatPage />} />

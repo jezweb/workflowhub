@@ -14,6 +14,7 @@ import agentsRoutes from './routes/agents';
 import executionsRoutes from './routes/executions';
 import publicRoutes from './routes/public';
 import contextRoutes from './routes/context';
+import storageRoutes from './routes/storage';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -60,6 +61,7 @@ app.use('/api/settings/*', authMiddleware);
 app.use('/api/agents/*', authMiddleware);
 app.use('/api/executions/*', authMiddleware);
 app.use('/api/context/*', authMiddleware);
+app.use('/api/storage/*', authMiddleware);
 
 // Protected API routes
 app.route('/api/forms', formsRoutes);
@@ -71,6 +73,7 @@ app.route('/api/settings', settingsRoutes);
 app.route('/api/agents', agentsRoutes);
 app.route('/api/executions', executionsRoutes);
 app.route('/api/context', contextRoutes);
+app.route('/api/storage', storageRoutes);
 
 // Health check
 app.get('/api/health', (c) => {

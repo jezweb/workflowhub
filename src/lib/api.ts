@@ -317,6 +317,41 @@ export const executionsApi = {
   },
 };
 
+// Storage API
+export const storageApi = {
+  listBuckets: () => apiRequest('/storage/buckets'),
+  
+  getBucket: (id: string) => apiRequest(`/storage/buckets/${id}`),
+  
+  createBucket: (data: {
+    name: string;
+    description?: string;
+    provider: 'r2' | 's3';
+    is_default?: boolean;
+    is_default_chat?: boolean;
+    is_default_forms?: boolean;
+    config: any;
+  }) => apiRequest('/storage/buckets', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  
+  updateBucket: (id: string, data: any) => apiRequest(`/storage/buckets/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  
+  deleteBucket: (id: string) => apiRequest(`/storage/buckets/${id}`, {
+    method: 'DELETE',
+  }),
+  
+  testConnection: (id: string) => apiRequest(`/storage/buckets/${id}/test`, {
+    method: 'POST',
+  }),
+  
+  getDefaults: () => apiRequest('/storage/defaults'),
+};
+
 // Convenience default export with all APIs
 const api = {
   get: (url: string) => apiRequest(url),
