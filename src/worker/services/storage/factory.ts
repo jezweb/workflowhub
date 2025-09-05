@@ -54,6 +54,7 @@ export class StorageFactory {
 
   /**
    * Create S3 provider
+   * Handles AWS S3, Vultr, MinIO, and any S3-compatible service
    */
   private static createS3Provider(config: S3Config): S3Provider {
     return new S3Provider(config);

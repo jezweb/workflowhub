@@ -1,6 +1,7 @@
 // R2 Storage Provider Implementation
 
 // Using any to avoid R2 type conflicts
+import { S3Provider } from './s3-provider';
 import type { 
   StorageProvider, 
   StorageObject, 
@@ -13,16 +14,19 @@ import type {
 export class R2Provider implements StorageProvider {
   private bucket: any = null;
   private _config: R2Config;
+  private s3Provider: S3Provider | null = null;
 
   constructor(config: R2Config, bucket?: any) {
     this._config = config;
-    if (config.use_binding && bucket) {
-      this.bucket = bucket;
-    }
     
-    // Validate config if not using bindings
-    if (!config.use_binding && (!config.account_id || !config.access_key_id)) {
-      console.warn('R2 config incomplete - may cause issues without bindings');
+    if (config.use_binding && bucket) {
+      // Binding mode - use the native R2 bucket
+      this.bucket = bucket;
+    } else if (!config.use_binding && config.account_id && config.access_key_id && config.secret_access_key) {
+      // Credential mode - use S3Provider
+      this.s3Provider = new S3Provider(config);
+    } else if (!config.use_binding) {
+      console.warn('R2 config incomplete - missing required credentials for non-binding mode');
     }
   }
 
@@ -56,6 +60,12 @@ export class R2Provider implements StorageProvider {
     data: ArrayBuffer | ReadableStream | Blob, 
     options?: StorageUploadOptions
   ): Promise<void> {
+    // If using S3Provider (credential mode), delegate to it
+    if (this.s3Provider) {
+      return this.s3Provider.upload(key, data, options);
+    }
+
+    // Otherwise use binding mode
     const bucket = await this.getBucket();
     
     const httpMetadata: Record<string, string> = {};
@@ -79,6 +89,12 @@ export class R2Provider implements StorageProvider {
   }
 
   async download(key: string): Promise<Response> {
+    // If using S3Provider (credential mode), delegate to it
+    if (this.s3Provider) {
+      return this.s3Provider.download(key);
+    }
+
+    // Otherwise use binding mode
     const bucket = await this.getBucket();
     const object = await bucket.get(key);
     
@@ -99,17 +115,35 @@ export class R2Provider implements StorageProvider {
   }
 
   async delete(key: string): Promise<void> {
+    // If using S3Provider (credential mode), delegate to it
+    if (this.s3Provider) {
+      return this.s3Provider.delete(key);
+    }
+
+    // Otherwise use binding mode
     const bucket = await this.getBucket();
     await bucket.delete(key);
   }
 
   async exists(key: string): Promise<boolean> {
+    // If using S3Provider (credential mode), delegate to it
+    if (this.s3Provider) {
+      return this.s3Provider.exists(key);
+    }
+
+    // Otherwise use binding mode
     const bucket = await this.getBucket();
     const object = await bucket.head(key);
     return object !== null;
   }
 
   async list(options?: StorageListOptions): Promise<StorageListResult> {
+    // If using S3Provider (credential mode), delegate to it
+    if (this.s3Provider) {
+      return this.s3Provider.list(options);
+    }
+
+    // Otherwise use binding mode
     const bucket = await this.getBucket();
     
     const listOptions: R2ListOptions = {
@@ -136,6 +170,12 @@ export class R2Provider implements StorageProvider {
   }
 
   async testConnection(): Promise<boolean> {
+    // If using S3Provider (credential mode), delegate to it
+    if (this.s3Provider) {
+      return this.s3Provider.testConnection();
+    }
+
+    // Otherwise test binding mode
     try {
       // Try to list with limit 1 to test connection
       await this.list({ maxKeys: 1 });

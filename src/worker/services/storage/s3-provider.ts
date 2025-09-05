@@ -1,212 +1,255 @@
-// S3 Storage Provider Implementation
+// Universal S3-Compatible Storage Provider
+// Supports AWS S3, Cloudflare R2, Vultr, MinIO, and any S3-compatible service
 
-import { AwsClient } from 'aws4fetch';
-import type { 
-  StorageProvider, 
-  StorageObject, 
-  StorageListOptions, 
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
+  type PutObjectCommandInput,
+  type ListObjectsV2CommandInput,
+} from '@aws-sdk/client-s3';
+
+import type {
+  StorageProvider,
+  StorageObject,
+  StorageListOptions,
   StorageListResult,
   StorageUploadOptions,
-  S3Config 
+  S3Config,
+  R2Config,
 } from './types';
 
 export class S3Provider implements StorageProvider {
-  private client: AwsClient;
-  private config: S3Config;
-  private endpoint: string;
+  private client: S3Client;
+  private bucketName: string;
+  private isR2: boolean = false;
 
-  constructor(config: S3Config) {
-    this.config = config;
+  constructor(config: S3Config | R2Config) {
+    this.bucketName = config.bucket_name;
     
-    // Determine endpoint
-    if (config.endpoint) {
-      this.endpoint = config.endpoint;
+    // Determine if this is R2 in credential mode
+    this.isR2 = 'use_binding' in config && !config.use_binding;
+    
+    // Build S3Client configuration
+    const clientConfig: any = {
+      credentials: {
+        accessKeyId: config.access_key_id!,
+        secretAccessKey: config.secret_access_key!,
+      },
+    };
+
+    if (this.isR2) {
+      // R2 specific configuration
+      const r2Config = config as R2Config;
+      clientConfig.endpoint = `https://${r2Config.account_id}.r2.cloudflarestorage.com`;
+      clientConfig.region = 'auto';
     } else {
-      this.endpoint = `https://s3.${config.region}.amazonaws.com`;
+      // Standard S3 or S3-compatible configuration
+      const s3Config = config as S3Config;
+      clientConfig.region = s3Config.region || 'us-east-1';
+      
+      if (s3Config.endpoint) {
+        clientConfig.endpoint = s3Config.endpoint;
+        clientConfig.forcePathStyle = s3Config.force_path_style || false;
+      }
     }
 
-    // Initialize AWS client for signing requests
-    this.client = new AwsClient({
-      accessKeyId: config.access_key_id,
-      secretAccessKey: config.secret_access_key,
-      region: config.region,
-      service: 's3',
-    });
-  }
-
-  private getUrl(key?: string): string {
-    if (this.config.force_path_style || this.config.endpoint) {
-      // Path-style: https://endpoint/bucket/key
-      const base = `${this.endpoint}/${this.config.bucket_name}`;
-      return key ? `${base}/${key}` : base;
-    } else {
-      // Virtual-hosted-style: https://bucket.s3.region.amazonaws.com/key
-      const base = `https://${this.config.bucket_name}.s3.${this.config.region}.amazonaws.com`;
-      return key ? `${base}/${key}` : base;
-    }
+    this.client = new S3Client(clientConfig);
   }
 
   async upload(
-    key: string, 
-    data: ArrayBuffer | ReadableStream | Blob, 
+    key: string,
+    data: ArrayBuffer | ReadableStream | Blob,
     options?: StorageUploadOptions
   ): Promise<void> {
-    const url = this.getUrl(key);
+    // Convert data to a format S3 can handle
+    let body: any;
     
-    const headers: HeadersInit = {};
-    if (options?.contentType) {
-      headers['Content-Type'] = options.contentType;
-    }
-    
-    // Add custom metadata with x-amz-meta- prefix
-    if (options?.metadata) {
-      Object.entries(options.metadata).forEach(([k, v]) => {
-        headers[`x-amz-meta-${k}`] = v;
-      });
-    }
-
-    // Convert data to ArrayBuffer if needed
-    let body: ArrayBuffer;
-    if (data instanceof ArrayBuffer) {
-      body = data;
-    } else if (data instanceof Blob) {
+    if (data instanceof Blob) {
+      // Convert Blob to ArrayBuffer for S3
       body = await data.arrayBuffer();
-    } else {
-      // ReadableStream - need to collect it
+    } else if (data instanceof ArrayBuffer) {
+      body = data;
+    } else if (data instanceof ReadableStream) {
+      // Convert ReadableStream to ArrayBuffer
       const reader = data.getReader();
       const chunks: Uint8Array[] = [];
+      
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         chunks.push(value);
       }
+      
       const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
       const result = new Uint8Array(totalLength);
       let offset = 0;
+      
       for (const chunk of chunks) {
         result.set(chunk, offset);
         offset += chunk.length;
       }
+      
       body = result.buffer;
+    } else {
+      body = data;
     }
 
-    const response = await this.client.fetch(url, {
-      method: 'PUT',
-      headers,
-      body,
-    });
+    const params: PutObjectCommandInput = {
+      Bucket: this.bucketName,
+      Key: key,
+      Body: body,
+      ContentType: options?.contentType,
+      Metadata: options?.metadata,
+    };
 
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`S3 upload failed: ${response.status} - ${text}`);
+    try {
+      await this.client.send(new PutObjectCommand(params));
+    } catch (error: any) {
+      console.error('S3 upload error:', error);
+      throw new Error(`Failed to upload to S3: ${error.message}`);
     }
   }
 
   async download(key: string): Promise<Response> {
-    const url = this.getUrl(key);
-    const response = await this.client.fetch(url, {
-      method: 'GET',
-    });
+    try {
+      const command = new GetObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      });
 
-    if (!response.ok && response.status !== 404) {
-      const text = await response.text();
-      throw new Error(`S3 download failed: ${response.status} - ${text}`);
+      const response = await this.client.send(command);
+      
+      if (!response.Body) {
+        return new Response('Not found', { status: 404 });
+      }
+
+      // Convert the response body to a web stream
+      const stream = response.Body as any;
+      
+      const headers = new Headers();
+      if (response.ContentType) {
+        headers.set('Content-Type', response.ContentType);
+      }
+      if (response.ContentLength) {
+        headers.set('Content-Length', response.ContentLength.toString());
+      }
+      if (response.ETag) {
+        headers.set('ETag', response.ETag);
+      }
+      if (response.LastModified) {
+        headers.set('Last-Modified', response.LastModified.toUTCString());
+      }
+
+      // Handle the stream properly based on the environment
+      // In Workers environment, we need to handle this differently
+      if (stream.transformToWebStream) {
+        return new Response(stream.transformToWebStream(), { headers });
+      } else if (stream instanceof ReadableStream) {
+        return new Response(stream, { headers });
+      } else {
+        // Fallback - collect all chunks into an ArrayBuffer
+        const chunks: Uint8Array[] = [];
+        const reader = stream.getReader ? stream.getReader() : stream;
+        
+        if (reader && reader.read) {
+          // Handle as async iterator
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+          }
+        } else {
+          // Handle as async iterable
+          for await (const chunk of stream) {
+            chunks.push(new Uint8Array(chunk));
+          }
+        }
+        
+        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        const result = new Uint8Array(totalLength);
+        let offset = 0;
+        
+        for (const chunk of chunks) {
+          result.set(chunk, offset);
+          offset += chunk.length;
+        }
+        
+        return new Response(result.buffer, { headers });
+      }
+    } catch (error: any) {
+      console.error('S3 download error:', error);
+      if (error.name === 'NoSuchKey') {
+        return new Response('Not found', { status: 404 });
+      }
+      throw new Error(`Failed to download from S3: ${error.message}`);
     }
-
-    return response;
   }
 
   async delete(key: string): Promise<void> {
-    const url = this.getUrl(key);
-    const response = await this.client.fetch(url, {
-      method: 'DELETE',
-    });
-
-    if (!response.ok && response.status !== 404) {
-      const text = await response.text();
-      throw new Error(`S3 delete failed: ${response.status} - ${text}`);
+    try {
+      await this.client.send(new DeleteObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }));
+    } catch (error: any) {
+      console.error('S3 delete error:', error);
+      throw new Error(`Failed to delete from S3: ${error.message}`);
     }
   }
 
   async exists(key: string): Promise<boolean> {
-    const url = this.getUrl(key);
-    const response = await this.client.fetch(url, {
-      method: 'HEAD',
-    });
-
-    return response.ok;
+    try {
+      await this.client.send(new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+      }));
+      return true;
+    } catch (error: any) {
+      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+        return false;
+      }
+      console.error('S3 exists check error:', error);
+      throw new Error(`Failed to check existence in S3: ${error.message}`);
+    }
   }
 
   async list(options?: StorageListOptions): Promise<StorageListResult> {
-    const url = this.getUrl();
-    const params = new URLSearchParams();
-    
-    if (options?.prefix) {
-      params.append('prefix', options.prefix);
-    }
-    if (options?.maxKeys) {
-      params.append('max-keys', options.maxKeys.toString());
-    }
-    if (options?.continuationToken) {
-      params.append('continuation-token', options.continuationToken);
-    }
-    
-    // Use list-type=2 for better pagination support
-    params.append('list-type', '2');
+    try {
+      const params: ListObjectsV2CommandInput = {
+        Bucket: this.bucketName,
+        MaxKeys: options?.maxKeys || 1000,
+        Prefix: options?.prefix,
+        ContinuationToken: options?.continuationToken,
+      };
 
-    const response = await this.client.fetch(`${url}?${params.toString()}`, {
-      method: 'GET',
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`S3 list failed: ${response.status} - ${text}`);
-    }
-
-    const text = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, 'text/xml');
-    
-    const objects: StorageObject[] = [];
-    const contents = doc.querySelectorAll('Contents');
-    contents.forEach(item => {
-      const key = item.querySelector('Key')?.textContent;
-      const size = item.querySelector('Size')?.textContent;
-      const lastModified = item.querySelector('LastModified')?.textContent;
-      const etag = item.querySelector('ETag')?.textContent;
+      const response = await this.client.send(new ListObjectsV2Command(params));
       
-      if (key) {
-        objects.push({
-          key,
-          size: parseInt(size || '0', 10),
-          lastModified: lastModified ? new Date(lastModified) : new Date(),
-          etag: etag?.replace(/"/g, ''),
-        });
-      }
-    });
+      const objects: StorageObject[] = (response.Contents || []).map(obj => ({
+        key: obj.Key!,
+        size: obj.Size || 0,
+        lastModified: obj.LastModified || new Date(),
+        etag: obj.ETag,
+        metadata: {},
+      }));
 
-    const isTruncated = doc.querySelector('IsTruncated')?.textContent === 'true';
-    const nextToken = doc.querySelector('NextContinuationToken')?.textContent || undefined;
-
-    return {
-      objects,
-      isTruncated,
-      continuationToken: nextToken,
-    };
-  }
-
-  async getSignedUrl(key: string, _expiresIn: number = 3600): Promise<string> {
-    // Generate presigned URL
-    const url = this.getUrl(key);
-    
-    // For now, return the unsigned URL
-    // Implementing proper presigned URLs requires more complex signing
-    return url;
+      return {
+        objects,
+        isTruncated: response.IsTruncated || false,
+        continuationToken: response.NextContinuationToken,
+      };
+    } catch (error: any) {
+      console.error('S3 list error:', error);
+      throw new Error(`Failed to list objects in S3: ${error.message}`);
+    }
   }
 
   async testConnection(): Promise<boolean> {
     try {
-      // Try to list bucket with limit 1
+      // Try to list with limit 1 to test connection
       await this.list({ maxKeys: 1 });
       return true;
     } catch (error) {
