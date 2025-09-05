@@ -76,6 +76,30 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 - Environment-specific settings
 - Webhook URL management
 
+### 🏢 Context & Variables System (v2.4.0)
+- **Organization Profile**
+  - Company information, logo, social links
+  - Keywords, Products, Services tags for SEO and categorization
+  - Context text for AI agents
+  - All fields available as `{{org.*}}` variables
+- **Team Profiles**
+  - Individual user profiles with contact details
+  - Professional bio and skills management
+  - Available as `{{team.current.*}}` variables
+- **Custom Variables**
+  - Global variables (shared across all users)
+  - Personal variables (user-specific)
+  - Sensitive value masking for API keys
+  - Available as `{{custom.*}}` and `{{my.*}}` variables
+- **Variable Usage**
+  - Available in Actions (webhook payloads, headers, URLs)
+  - Available in Forms (webhook integrations)
+  - Automatic substitution at execution time
+  - Examples:
+    - Organization: `{{org.name}}`, `{{org.keywords}}`, `{{org.product.0}}`
+    - Team: `{{team.current.name}}`, `{{team.current.skills}}`, `{{team.current.skill.2}}`
+    - Custom: `{{custom.api_endpoint}}`, `{{my.personal_token}}`
+
 ### 📈 Dashboard
 - Customizable widget layout
 - Drag-and-drop arrangement

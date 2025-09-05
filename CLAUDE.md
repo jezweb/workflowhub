@@ -282,9 +282,10 @@ const useAuthStore = create((set) => ({
 
 ## Recent Implementations
 
-### Context & Variables System (v2.3.0)
+### Context & Variables System (v2.4.0)
 - **Organization Context** - Central company information management
   - Organization details, logo, social links stored in D1
+  - Keywords, Products, Services tags (v2.4.0)
   - Available as {{org.*}} variables throughout the system
 - **Team Profiles** - Individual user profile system  
   - Personal details, contact info, bio, skills
@@ -296,11 +297,11 @@ const useAuthStore = create((set) => ({
   - Available as {{custom.*}} and {{my.*}} variables
 - **Variable Service** - Centralized substitution engine
   - Located in `worker/services/variables.ts`
-  - Handles all variable substitution across Actions
-  - Future integration planned for Forms and Agents
-- **Settings UI** - Three new tabs in Settings page
-  - Organization Settings for company info
-  - Team Profile for user profiles  
+  - Handles all variable substitution across Actions and Forms
+  - Organization tags available as comma-separated lists and individual items
+- **Settings UI** - Three enhanced tabs in Settings page
+  - Organization Settings with tag management for Keywords/Products/Services
+  - Team Profile for user profiles with skills management
   - Variables for custom variable management
 
 ### Unified Appearance System (v2.2.1)
