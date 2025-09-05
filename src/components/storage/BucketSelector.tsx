@@ -52,6 +52,7 @@ export function BucketSelector({
       setIsLoading(true);
       setError(null);
       const response = await storageApi.listBuckets();
+      console.log('Loaded buckets:', response);
       setBuckets(response.buckets || []);
     } catch (err) {
       console.error('Failed to load buckets:', err);
@@ -128,9 +129,9 @@ export function BucketSelector({
         </SelectTrigger>
         <SelectContent>
           {buckets.length === 0 ? (
-            <SelectItem value="" disabled>
+            <div className="p-2 text-sm text-muted-foreground text-center">
               No storage buckets available
-            </SelectItem>
+            </div>
           ) : (
             buckets.map((bucket) => (
               <SelectItem key={bucket.id} value={bucket.id}>
