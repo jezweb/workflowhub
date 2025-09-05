@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
 import { organizationApi } from '@/lib/api/context';
 import type { OrganizationContext } from '@/types/context';
 
@@ -18,6 +20,9 @@ export function OrganizationSettings() {
     phone: '',
     address: '',
     context_text: '',
+    keywords: [],
+    products: [],
+    services: [],
     social_links: {
       twitter: '',
       linkedin: '',
@@ -26,6 +31,9 @@ export function OrganizationSettings() {
       github: ''
     }
   });
+  const [newKeyword, setNewKeyword] = useState('');
+  const [newProduct, setNewProduct] = useState('');
+  const [newService, setNewService] = useState('');
 
   useEffect(() => {
     loadOrganization();
@@ -37,6 +45,9 @@ export function OrganizationSettings() {
       if (org) {
         setFormData({
           ...org,
+          keywords: org.keywords || [],
+          products: org.products || [],
+          services: org.services || [],
           social_links: org.social_links || {
             twitter: '',
             linkedin: '',
@@ -78,6 +89,58 @@ export function OrganizationSettings() {
         ...prev.social_links,
         [platform]: value
       }
+    }));
+  };
+
+  // Tag management functions
+  const addKeyword = () => {
+    if (newKeyword.trim() && !formData.keywords?.includes(newKeyword.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        keywords: [...(prev.keywords || []), newKeyword.trim()]
+      }));
+      setNewKeyword('');
+    }
+  };
+
+  const removeKeyword = (keyword: string) => {
+    setFormData(prev => ({
+      ...prev,
+      keywords: prev.keywords?.filter(k => k !== keyword) || []
+    }));
+  };
+
+  const addProduct = () => {
+    if (newProduct.trim() && !formData.products?.includes(newProduct.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        products: [...(prev.products || []), newProduct.trim()]
+      }));
+      setNewProduct('');
+    }
+  };
+
+  const removeProduct = (product: string) => {
+    setFormData(prev => ({
+      ...prev,
+      products: prev.products?.filter(p => p !== product) || []
+    }));
+  };
+
+  const addService = () => {
+    if (newService.trim() && !formData.services?.includes(newService.trim())) {
+      setFormData(prev => ({
+        ...prev,
+        services: [...(prev.services || []), newService.trim()]
+      }));
+      setNewService('');
+    }
+  };
+
+  const removeService = (service: string) => {
+    setFormData(prev => ({
+      ...prev,
+      services: prev.services?.filter(s => s !== service) || []
     }));
   };
 
@@ -245,6 +308,117 @@ export function OrganizationSettings() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Keywords</CardTitle>
+          <CardDescription>
+            SEO keywords and search terms for your organization
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={newKeyword}
+              onChange={(e) => setNewKeyword(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addKeyword())}
+              placeholder="Type a keyword and press Enter"
+            />
+            <Button type="button" onClick={addKeyword}>
+              Add
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {formData.keywords?.map((keyword) => (
+              <Badge key={keyword} variant="secondary" className="pl-2 pr-1">
+                {keyword}
+                <button
+                  type="button"
+                  onClick={() => removeKeyword(keyword)}
+                  className="ml-2 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Products</CardTitle>
+          <CardDescription>
+            Products your organization offers
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={newProduct}
+              onChange={(e) => setNewProduct(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addProduct())}
+              placeholder="Type a product and press Enter"
+            />
+            <Button type="button" onClick={addProduct}>
+              Add
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {formData.products?.map((product) => (
+              <Badge key={product} variant="secondary" className="pl-2 pr-1">
+                {product}
+                <button
+                  type="button"
+                  onClick={() => removeProduct(product)}
+                  className="ml-2 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Services</CardTitle>
+          <CardDescription>
+            Services your organization provides
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              value={newService}
+              onChange={(e) => setNewService(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addService())}
+              placeholder="Type a service and press Enter"
+            />
+            <Button type="button" onClick={addService}>
+              Add
+            </Button>
+          </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {formData.services?.map((service) => (
+              <Badge key={service} variant="secondary" className="pl-2 pr-1">
+                {service}
+                <button
+                  type="button"
+                  onClick={() => removeService(service)}
+                  className="ml-2 hover:text-destructive"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Available Variables</CardTitle>
           <CardDescription>
             These variables can be used in forms, actions, and agents
@@ -310,6 +484,18 @@ export function OrganizationSettings() {
                 <span className="truncate max-w-xs">{formData.social_links.github}</span>
               </div>
             )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.keywords}}"}</span>
+              <span className="truncate max-w-xs">{formData.keywords?.join(', ') || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.products}}"}</span>
+              <span className="truncate max-w-xs">{formData.products?.join(', ') || '(not set)'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">{"{{org.services}}"}</span>
+              <span className="truncate max-w-xs">{formData.services?.join(', ') || '(not set)'}</span>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -29,6 +29,34 @@ app.get('/organization', async (c) => {
       }
     }
 
+    // Parse the new tag fields
+    if (org && org.keywords) {
+      try {
+        org.keywords = JSON.parse(org.keywords as string);
+      } catch (e) {
+        console.error('Failed to parse keywords:', e);
+        org.keywords = [];
+      }
+    }
+
+    if (org && org.products) {
+      try {
+        org.products = JSON.parse(org.products as string);
+      } catch (e) {
+        console.error('Failed to parse products:', e);
+        org.products = [];
+      }
+    }
+
+    if (org && org.services) {
+      try {
+        org.services = JSON.parse(org.services as string);
+      } catch (e) {
+        console.error('Failed to parse services:', e);
+        org.services = [];
+      }
+    }
+
     return c.json({ organization: org || null });
   } catch (error) {
     console.error('Error fetching organization:', error);
@@ -49,6 +77,9 @@ app.put('/organization', async (c) => {
 
     const social_links = JSON.stringify(body.social_links || {});
     const custom_fields = JSON.stringify(body.custom_fields || {});
+    const keywords = JSON.stringify(body.keywords || []);
+    const products = JSON.stringify(body.products || []);
+    const services = JSON.stringify(body.services || []);
 
     if (existing) {
       // Update existing
@@ -57,7 +88,8 @@ app.put('/organization', async (c) => {
           UPDATE organization_context 
           SET name = ?, description = ?, website = ?, email = ?, phone = ?, 
               address = ?, logo_url = ?, social_links = ?, context_text = ?, 
-              custom_fields = ?, updated_at = CURRENT_TIMESTAMP
+              custom_fields = ?, keywords = ?, products = ?, services = ?,
+              updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
         `)
         .bind(
@@ -71,6 +103,9 @@ app.put('/organization', async (c) => {
           social_links,
           body.context_text || null,
           custom_fields,
+          keywords,
+          products,
+          services,
           existing.id
         )
         .run();
@@ -81,8 +116,9 @@ app.put('/organization', async (c) => {
         .prepare(`
           INSERT INTO organization_context (
             id, name, description, website, email, phone, address, 
-            logo_url, social_links, context_text, custom_fields
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            logo_url, social_links, context_text, custom_fields,
+            keywords, products, services
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `)
         .bind(
           id,
@@ -95,7 +131,10 @@ app.put('/organization', async (c) => {
           body.logo_url || null,
           social_links,
           body.context_text || null,
-          custom_fields
+          custom_fields,
+          keywords,
+          products,
+          services
         )
         .run();
     }

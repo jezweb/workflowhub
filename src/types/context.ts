@@ -9,6 +9,9 @@ export interface OrganizationContext {
   logo_url?: string;
   social_links?: Record<string, string>;
   context_text?: string;
+  keywords?: string[];
+  products?: string[];
+  services?: string[];
   custom_fields?: Record<string, any>;
   created_at?: string;
   updated_at?: string;

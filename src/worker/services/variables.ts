@@ -80,6 +80,60 @@ export class VariableService {
       }
     }
 
+    // Parse keywords if they exist
+    if (org.keywords) {
+      try {
+        const keywords = JSON.parse(org.keywords as string);
+        if (Array.isArray(keywords)) {
+          variables['{{org.keywords}}'] = keywords.join(', ');
+          // Add individual keyword access
+          keywords.forEach((keyword: string, index: number) => {
+            variables[`{{org.keyword.${index}}}`] = keyword;
+          });
+        }
+      } catch (e) {
+        variables['{{org.keywords}}'] = '';
+      }
+    } else {
+      variables['{{org.keywords}}'] = '';
+    }
+
+    // Parse products if they exist
+    if (org.products) {
+      try {
+        const products = JSON.parse(org.products as string);
+        if (Array.isArray(products)) {
+          variables['{{org.products}}'] = products.join(', ');
+          // Add individual product access
+          products.forEach((product: string, index: number) => {
+            variables[`{{org.product.${index}}}`] = product;
+          });
+        }
+      } catch (e) {
+        variables['{{org.products}}'] = '';
+      }
+    } else {
+      variables['{{org.products}}'] = '';
+    }
+
+    // Parse services if they exist
+    if (org.services) {
+      try {
+        const services = JSON.parse(org.services as string);
+        if (Array.isArray(services)) {
+          variables['{{org.services}}'] = services.join(', ');
+          // Add individual service access
+          services.forEach((service: string, index: number) => {
+            variables[`{{org.service.${index}}}`] = service;
+          });
+        }
+      } catch (e) {
+        variables['{{org.services}}'] = '';
+      }
+    } else {
+      variables['{{org.services}}'] = '';
+    }
+
     return variables;
   }
 

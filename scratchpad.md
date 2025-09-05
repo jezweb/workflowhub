@@ -118,7 +118,8 @@ The Context & Variables system is now fully functional in production. All three 
 2. ✅ **Organization page NOW has variable display** - shows all available org variables
 3. ✅ **Forms NOW use variables** - webhooks URLs and payloads support variable substitution
 4. ✅ **Bio and context fields NOW exposed** - {{team.current.bio}} and {{org.context}} added
-5. ⏳ **AI Agents don't use variables yet** - system prompts could include context (Phase 4)
+5. ✅ **Organization Tags Added** - Keywords, Products, Services now available as variables
+6. ⏳ **AI Agents don't use variables yet** - system prompts could include context (Phase 4)
 
 ### Phase 1: Add Skills as Variables ✅ COMPLETED
 **File:** `src/worker/services/variables.ts`
@@ -179,7 +180,33 @@ Variables to display:
    - Add variable picker in system prompt editor
    - Show available variables in sidebar
 
-### Phase 5: Enhanced Variable Features
+### Phase 5: Organization Tags (COMPLETED Sep 5, 2025)
+
+#### Added Three Tag-Based Fields to Organization
+**Implementation:** Similar to Skills for Team Profiles, stored as JSON arrays in TEXT columns
+
+**New Fields:**
+- **Keywords** - SEO keywords and search terms
+- **Products** - Products the organization offers
+- **Services** - Services the organization provides
+
+**Database Migration:** `0016_add_org_tags.sql`
+- Added `keywords`, `products`, `services` TEXT columns to `organization_context` table
+
+**Variables Available:**
+- `{{org.keywords}}` - Comma-separated list of all keywords
+- `{{org.products}}` - Comma-separated list of all products  
+- `{{org.services}}` - Comma-separated list of all services
+- Individual access: `{{org.keyword.0}}`, `{{org.product.1}}`, `{{org.service.2}}`, etc.
+
+**UI Features:**
+- Badge-style display with remove buttons (X)
+- Input field with Enter key support
+- Add button for explicit adding
+- Duplicate prevention
+- Real-time variable preview in Available Variables section
+
+### Phase 6: Enhanced Variable Features (Future)
 
 #### Custom Fields as Variables
 - Expose organization custom_fields as `{{org.custom.fieldName}}`
