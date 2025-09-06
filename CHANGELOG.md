@@ -5,6 +5,40 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2025-01-06
+
+### Added
+- **Enhanced Storage Provider Support**: Intuitive configuration for 8 storage providers
+  - Cloudflare R2 (Binding mode) - Direct Worker binding for fastest performance
+  - Cloudflare R2 (S3 API mode) - Credential-based access via S3-compatible API
+  - Amazon S3 - Standard AWS S3 configuration
+  - Backblaze B2 - Cost-effective S3-compatible storage
+  - DigitalOcean Spaces - Simple, scalable object storage
+  - Vultr Object Storage - High-performance S3-compatible storage
+  - MinIO - Self-hosted S3-compatible storage
+  - Generic S3-compatible - Support for any S3-compatible service
+
+### Enhanced
+- **Improved Storage Configuration UX**
+  - Removed confusing tabs in favor of dynamic configuration sections
+  - Provider-specific form fields with appropriate labels and placeholders
+  - Pre-configured endpoints for known providers
+  - Region dropdowns with provider-specific options
+  - Contextual help text for each provider
+  - Auto-detection of provider type when editing existing buckets
+  - Full-width form fields for better layout
+
+### Fixed
+- Storage bucket configuration not loading when editing
+- R2 credentials not working properly (now uses S3 API)
+- BucketSelector potential crash with undefined bucket IDs
+
+### Technical
+- AWS SDK v3 integration for S3-compatible operations
+- Universal S3Provider implementation supporting all providers
+- Backward compatible with existing database schema
+- Provider type mapping between UI and database
+
 ## [2.4.0] - 2025-01-04
 
 ### Added

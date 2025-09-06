@@ -492,9 +492,15 @@ DELETE /api/storage/buckets/:id       - Delete bucket
 POST   /api/storage/buckets/:id/test  - Test bucket connection
 POST   /api/storage/buckets/:id/set-default - Set as default bucket
 
-# Provider Support
-- Cloudflare R2 (with bindings or API)
-- Amazon S3 and S3-compatible (MinIO, Backblaze B2)
+# Provider Support (v2.6.0)
+- Cloudflare R2 (Binding mode - fastest, no credentials needed)
+- Cloudflare R2 (S3 API mode - with credentials)
+- Amazon S3
+- Backblaze B2
+- DigitalOcean Spaces
+- Vultr Object Storage
+- MinIO (self-hosted)
+- Generic S3-compatible services (Wasabi, Linode, etc.)
 - Encrypted credential storage in D1
 ```
 
