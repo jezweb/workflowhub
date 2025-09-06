@@ -20,10 +20,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ModelSelector } from '@/components/ui/model-selector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import type { Agent, AgentConfiguration, CreateAgentRequest } from '@/types/agent';
+import type { Agent, AgentConfiguration, CreateAgentRequest, OpenRouterModel, ModelsResponse } from '@/types/agent';
 
 interface AgentEditorProps {
   agent: Agent | null;
@@ -39,7 +40,8 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
     system_prompt: '',
     webhook_url: '',
     webhook_method: 'POST',
-    model: 'gpt-4',
+    model: 'openai/gpt-4o',
+    fallback_model: '',
     temperature: 0.7,
     max_tokens: 2000,
     is_active: true,
@@ -48,6 +50,8 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
   });
 
   const [loading, setLoading] = useState(false);
+  const [models, setModels] = useState<OpenRouterModel[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -61,6 +65,7 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
         webhook_url: agent.webhook_url,
         webhook_method: agent.webhook_method,
         model: agent.model,
+        fallback_model: agent.fallback_model || '',
         temperature: agent.temperature,
         max_tokens: agent.max_tokens,
         is_active: agent.is_active,
@@ -72,6 +77,30 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
       loadConfigurations(agent.id);
     }
   }, [agent]);
+
+  // Load models on mount
+  useEffect(() => {
+    loadModels();
+  }, []);
+
+  const loadModels = async () => {
+    setModelsLoading(true);
+    try {
+      const response = await api.get('/agents/openrouter/models') as ModelsResponse;
+      if (response.success && response.models) {
+        setModels(response.models);
+      }
+    } catch (error) {
+      console.error('Failed to load models:', error);
+      toast({
+        title: 'Warning',
+        description: 'Failed to load models. Using fallback list.',
+        variant: 'default',
+      });
+    } finally {
+      setModelsLoading(false);
+    }
+  };
 
   const loadConfigurations = async (agentId: string) => {
     try {
@@ -325,26 +354,36 @@ export default function AgentEditor({ agent, onClose, onSave }: AgentEditorProps
           </TabsContent>
 
           <TabsContent value="advanced" className="space-y-4">
-            <div>
-              <Label htmlFor="model">Model</Label>
-              <Select
-                value={formData.model}
-                onValueChange={(value) => setFormData({ ...formData, model: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="gpt-4">GPT-4</SelectItem>
-                  <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                  <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                  <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
-                  <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
-                  <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
-                  <SelectItem value="gemini-pro">Gemini Pro</SelectItem>
-                  <SelectItem value="gemini-flash">Gemini Flash</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="model">Primary Model</Label>
+                <ModelSelector
+                  value={formData.model}
+                  onChange={(value) => setFormData({ ...formData, model: value })}
+                  models={models}
+                  loading={modelsLoading}
+                  placeholder="Select primary model..."
+                  className="w-full"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  The main model to use for this agent
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="fallback_model">Fallback Model (Optional)</Label>
+                <ModelSelector
+                  value={formData.fallback_model}
+                  onChange={(value) => setFormData({ ...formData, fallback_model: value })}
+                  models={models}
+                  loading={modelsLoading}
+                  placeholder="Select fallback model (optional)..."
+                  className="w-full"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Optional fallback model if the primary model fails
+                </p>
+              </div>
             </div>
 
             <div>

@@ -143,9 +143,9 @@ app.post('/', async (c) => {
         INSERT INTO agents (
           id, user_id, name, description, avatar_url, system_prompt,
           webhook_url, webhook_method,
-          model, temperature, max_tokens, is_active, is_public,
+          model, fallback_model, temperature, max_tokens, is_active, is_public,
           metadata, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         agentId,
         userId,
@@ -155,7 +155,8 @@ app.post('/', async (c) => {
         body.system_prompt || null,
         body.webhook_url,
         body.webhook_method || 'POST',
-        body.model || 'gpt-4',
+        body.model || 'openai/gpt-4o',
+        body.fallback_model || null,
         body.temperature ?? 0.7,
         body.max_tokens || 2000,
         body.is_active ?? true,
@@ -236,7 +237,7 @@ app.put('/:id', async (c) => {
     const updateableFields = [
       'name', 'description', 'avatar_url', 'system_prompt',
       'webhook_url', 'webhook_method',
-      'model', 'temperature', 'max_tokens', 'is_active', 'is_public'
+      'model', 'fallback_model', 'temperature', 'max_tokens', 'is_active', 'is_public'
     ];
     
     for (const field of updateableFields) {
@@ -387,6 +388,7 @@ app.post('/:id/test', async (c) => {
         name: agent.name,
         system_prompt: agent.system_prompt,
         model: agent.model,
+        fallback_model: agent.fallback_model,
         temperature: agent.temperature,
         max_tokens: agent.max_tokens,
       },
@@ -432,6 +434,73 @@ app.post('/:id/test', async (c) => {
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to test agent' 
     }, 500);
+  }
+});
+
+// Fetch available models from OpenRouter API
+app.get('/openrouter/models', async (c) => {
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/models');
+    
+    if (!response.ok) {
+      throw new Error(`OpenRouter API returned ${response.status}`);
+    }
+    
+    const data = await response.json() as { data: Array<{
+      id: string;
+      name: string;
+      created: number;
+      context_length: number;
+      pricing?: {
+        prompt?: string;
+        completion?: string;
+      };
+      top_provider?: {
+        max_completion_tokens?: number;
+      };
+    }>};
+    
+    // Simplify the response for frontend use
+    const models = data.data.map(model => ({
+      id: model.id,
+      name: model.name,
+      provider: model.id.split('/')[0], // Extract provider from ID
+      context_length: model.context_length,
+      max_tokens: model.top_provider?.max_completion_tokens,
+    }));
+    
+    // Sort by provider then by name
+    models.sort((a, b) => {
+      if (a.provider !== b.provider) {
+        return a.provider.localeCompare(b.provider);
+      }
+      return a.name.localeCompare(b.name);
+    });
+    
+    return c.json({ success: true, models });
+  } catch (error) {
+    console.error('Failed to fetch OpenRouter models:', error);
+    
+    // Return a fallback list of popular models
+    const fallbackModels = [
+      { id: 'google/gemini-2.0-flash-exp:free', name: 'Google: Gemini 2.0 Flash (Free)', provider: 'google', context_length: 1048576 },
+      { id: 'google/gemini-pro-1.5', name: 'Google: Gemini Pro 1.5', provider: 'google', context_length: 2097152 },
+      { id: 'anthropic/claude-3.5-sonnet', name: 'Anthropic: Claude 3.5 Sonnet', provider: 'anthropic', context_length: 200000 },
+      { id: 'anthropic/claude-3-opus', name: 'Anthropic: Claude 3 Opus', provider: 'anthropic', context_length: 200000 },
+      { id: 'anthropic/claude-3.5-haiku', name: 'Anthropic: Claude 3.5 Haiku', provider: 'anthropic', context_length: 200000 },
+      { id: 'openai/gpt-4o', name: 'OpenAI: GPT-4o', provider: 'openai', context_length: 128000 },
+      { id: 'openai/gpt-4o-mini', name: 'OpenAI: GPT-4o Mini', provider: 'openai', context_length: 128000 },
+      { id: 'deepseek/deepseek-chat', name: 'DeepSeek: Chat', provider: 'deepseek', context_length: 64000 },
+      { id: 'qwen/qwen-2.5-72b-instruct', name: 'Qwen 2.5 72B Instruct', provider: 'qwen', context_length: 32768 },
+      { id: 'mistralai/mistral-large', name: 'Mistral: Large', provider: 'mistralai', context_length: 128000 },
+      { id: 'meta-llama/llama-3.1-405b-instruct', name: 'Meta: Llama 3.1 405B', provider: 'meta-llama', context_length: 131072 },
+    ];
+    
+    return c.json({ 
+      success: true, 
+      models: fallbackModels,
+      fallback: true 
+    });
   }
 });
 

@@ -8,7 +8,8 @@ export interface Agent {
   system_prompt?: string;
   webhook_url: string;
   webhook_method: 'GET' | 'POST' | 'PUT' | 'DELETE';
-  model: string;
+  model: string; // Full model ID format: "provider/model-name"
+  fallback_model?: string; // Optional fallback model ID
   temperature: number;
   max_tokens: number;
   is_active: boolean;
@@ -68,6 +69,7 @@ export interface CreateAgentRequest {
   webhook_url: string;
   webhook_method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   model?: string;
+  fallback_model?: string;
   temperature?: number;
   max_tokens?: number;
   is_active?: boolean;
@@ -116,12 +118,28 @@ export function generateConfigId(): string {
   return `config_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
+// Model-related types
+export interface OpenRouterModel {
+  id: string;
+  name: string;
+  provider: string;
+  context_length: number;
+  max_tokens?: number;
+}
+
+export interface ModelsResponse {
+  success: boolean;
+  models: OpenRouterModel[];
+  fallback?: boolean;
+}
+
 // Default agent templates
 export const DEFAULT_AGENT_TEMPLATES: Partial<Agent>[] = [
   {
     name: 'General Assistant',
     description: 'A helpful AI assistant for general questions and tasks',
-    model: 'gpt-4',
+    model: 'openai/gpt-4o',
+    fallback_model: 'openai/gpt-4o-mini',
     temperature: 0.7,
     max_tokens: 2000,
     system_prompt: 'You are a helpful assistant. Be concise and clear in your responses.',
@@ -129,7 +147,8 @@ export const DEFAULT_AGENT_TEMPLATES: Partial<Agent>[] = [
   {
     name: 'Code Helper',
     description: 'Specialized in programming and technical questions',
-    model: 'gpt-4',
+    model: 'anthropic/claude-3.5-sonnet',
+    fallback_model: 'anthropic/claude-3.5-haiku',
     temperature: 0.3,
     max_tokens: 3000,
     system_prompt: 'You are an expert programmer. Help with code, debugging, and technical questions. Always provide clear examples.',
@@ -137,7 +156,8 @@ export const DEFAULT_AGENT_TEMPLATES: Partial<Agent>[] = [
   {
     name: 'Creative Writer',
     description: 'Assists with creative writing and content generation',
-    model: 'gpt-4',
+    model: 'anthropic/claude-3-opus',
+    fallback_model: 'google/gemini-2.0-flash-exp:free',
     temperature: 0.9,
     max_tokens: 2500,
     system_prompt: 'You are a creative writing assistant. Help with stories, articles, and creative content. Be imaginative and engaging.',
