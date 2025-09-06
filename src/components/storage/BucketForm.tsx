@@ -18,9 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { InfoIcon } from 'lucide-react';
 import { storageApi } from '@/lib/api';
-import type { StorageBucket, CreateBucketInput, R2Config, S3Config } from '@/types/storage';
+import type { 
+  StorageBucket, 
+  CreateBucketInput, 
+  R2Config, 
+  S3Config,
+  StorageProviderUI,
+  StorageProviderDB 
+} from '@/types/storage';
 
 interface BucketFormProps {
   bucket?: StorageBucket | null;
@@ -28,29 +36,108 @@ interface BucketFormProps {
   onClose: () => void;
 }
 
+// Provider configurations
+const PROVIDER_OPTIONS = [
+  {
+    value: 'r2-binding' as StorageProviderUI,
+    label: 'Cloudflare R2 (Binding)',
+    description: 'Direct Worker binding - Fastest, no credentials needed',
+    helpText: 'Requires R2 bucket binding in wrangler.toml. Best for default buckets.',
+  },
+  {
+    value: 'r2-s3' as StorageProviderUI,
+    label: 'Cloudflare R2 (S3 API)',
+    description: 'Use R2 with credentials via S3-compatible API',
+    helpText: 'Use your Cloudflare Account ID and R2 API tokens.',
+  },
+  {
+    value: 's3' as StorageProviderUI,
+    label: 'Amazon S3',
+    description: 'AWS S3 buckets',
+    helpText: 'Standard AWS S3 bucket configuration.',
+  },
+  {
+    value: 'backblaze' as StorageProviderUI,
+    label: 'Backblaze B2',
+    description: 'Cost-effective S3-compatible cloud storage',
+    helpText: 'Get your Application Keys from B2 Cloud Storage > App Keys',
+  },
+  {
+    value: 'digitalocean' as StorageProviderUI,
+    label: 'DigitalOcean Spaces',
+    description: 'Simple, scalable S3-compatible object storage',
+    helpText: 'Create access keys in API > Spaces Keys section',
+  },
+  {
+    value: 'vultr' as StorageProviderUI,
+    label: 'Vultr Object Storage',
+    description: 'High-performance S3-compatible storage',
+    helpText: 'Find credentials in your Vultr Object Storage dashboard',
+  },
+  {
+    value: 'minio' as StorageProviderUI,
+    label: 'MinIO',
+    description: 'Self-hosted S3-compatible storage',
+    helpText: 'For self-hosted S3-compatible storage. Uses path-style URLs by default.',
+  },
+  {
+    value: 's3-compatible' as StorageProviderUI,
+    label: 'Other S3-Compatible',
+    description: 'Any S3-compatible API (Wasabi, Linode, etc.)',
+    helpText: 'Configure any S3-compatible storage service with custom endpoint.',
+  },
+];
+
+// Region options for various providers
+const AWS_REGIONS = [
+  'us-east-1', 'us-east-2', 'us-west-1', 'us-west-2',
+  'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-central-1',
+  'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ap-northeast-2',
+];
+
+const DO_REGIONS = [
+  { value: 'nyc3', label: 'New York 3' },
+  { value: 'sfo3', label: 'San Francisco 3' },
+  { value: 'ams3', label: 'Amsterdam 3' },
+  { value: 'sgp1', label: 'Singapore 1' },
+  { value: 'fra1', label: 'Frankfurt 1' },
+  { value: 'syd1', label: 'Sydney 1' },
+];
+
+const VULTR_REGIONS = [
+  { value: 'ewr1', label: 'New Jersey' },
+  { value: 'lax1', label: 'Los Angeles' },
+  { value: 'ams1', label: 'Amsterdam' },
+  { value: 'sgp1', label: 'Singapore' },
+];
+
+const BACKBLAZE_REGIONS = [
+  { value: 'us-west-001', label: 'US West (California)' },
+  { value: 'us-west-002', label: 'US West (Arizona)' },
+  { value: 'us-west-004', label: 'US West (Northern California)' },
+  { value: 'us-east-005', label: 'US East (Virginia)' },
+  { value: 'eu-central-003', label: 'EU Central (Amsterdam)' },
+];
+
 export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
   const [formData, setFormData] = useState({
     name: bucket?.name || '',
     description: bucket?.description || '',
-    provider: bucket?.provider || 'r2' as 'r2' | 's3',
+    providerUI: 'r2-binding' as StorageProviderUI,
     is_default: bucket?.is_default || false,
     is_default_chat: bucket?.is_default_chat || false,
     is_default_forms: bucket?.is_default_forms || false,
     
-    // R2 Config
-    r2_bucket_name: '',
-    r2_use_binding: true,
-    r2_account_id: '',
-    r2_access_key_id: '',
-    r2_secret_access_key: '',
+    // Common fields
+    bucket_name: '',
+    access_key_id: '',
+    secret_access_key: '',
     
-    // S3 Config
-    s3_bucket_name: '',
-    s3_region: 'us-east-1',
-    s3_access_key_id: '',
-    s3_secret_access_key: '',
-    s3_endpoint: '',
-    s3_force_path_style: false,
+    // Provider-specific fields
+    r2_account_id: '',
+    region: 'us-east-1',
+    endpoint: '',
+    force_path_style: false,
   });
   
   const [loading, setLoading] = useState(false);
@@ -65,30 +152,42 @@ export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
             const bucketData = response.bucket;
             const config = bucketData.config || {};
             
-            setFormData(prev => ({
-              ...prev,
+            // Determine UI provider from DB provider and config
+            let providerUI: StorageProviderUI = 'r2-binding';
+            if (bucketData.provider === 'r2') {
+              providerUI = config.use_binding ? 'r2-binding' : 'r2-s3';
+            } else if (bucketData.provider === 's3') {
+              // Try to detect specific S3 provider from endpoint
+              if (config.endpoint?.includes('backblazeb2.com')) {
+                providerUI = 'backblaze';
+              } else if (config.endpoint?.includes('digitaloceanspaces.com')) {
+                providerUI = 'digitalocean';
+              } else if (config.endpoint?.includes('vultrobjects.com')) {
+                providerUI = 'vultr';
+              } else if (config.endpoint) {
+                providerUI = config.force_path_style ? 'minio' : 's3-compatible';
+              } else {
+                providerUI = 's3';
+              }
+            }
+            
+            setFormData({
               name: bucketData.name || '',
               description: bucketData.description || '',
-              provider: bucketData.provider || 'r2',
+              providerUI,
               is_default: bucketData.is_default || false,
               is_default_chat: bucketData.is_default_chat || false,
               is_default_forms: bucketData.is_default_forms || false,
               
-              // R2 Config
-              r2_bucket_name: bucketData.provider === 'r2' ? (config.bucket_name || '') : prev.r2_bucket_name,
-              r2_use_binding: bucketData.provider === 'r2' ? (config.use_binding ?? true) : prev.r2_use_binding,
-              r2_account_id: bucketData.provider === 'r2' ? (config.account_id || '') : prev.r2_account_id,
-              r2_access_key_id: bucketData.provider === 'r2' ? (config.access_key_id || '') : prev.r2_access_key_id,
-              r2_secret_access_key: bucketData.provider === 'r2' ? (config.secret_access_key || '') : prev.r2_secret_access_key,
+              bucket_name: config.bucket_name || '',
+              access_key_id: config.access_key_id || '',
+              secret_access_key: config.secret_access_key || '',
               
-              // S3 Config
-              s3_bucket_name: bucketData.provider === 's3' ? (config.bucket_name || '') : prev.s3_bucket_name,
-              s3_region: bucketData.provider === 's3' ? (config.region || 'us-east-1') : prev.s3_region,
-              s3_access_key_id: bucketData.provider === 's3' ? (config.access_key_id || '') : prev.s3_access_key_id,
-              s3_secret_access_key: bucketData.provider === 's3' ? (config.secret_access_key || '') : prev.s3_secret_access_key,
-              s3_endpoint: bucketData.provider === 's3' ? (config.endpoint || '') : prev.s3_endpoint,
-              s3_force_path_style: bucketData.provider === 's3' ? (config.force_path_style || false) : prev.s3_force_path_style,
-            }));
+              r2_account_id: bucketData.provider === 'r2' ? (config.account_id || '') : '',
+              region: config.region || 'us-east-1',
+              endpoint: config.endpoint || '',
+              force_path_style: config.force_path_style || false,
+            });
           }
         })
         .catch((error) => {
@@ -103,31 +202,106 @@ export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    let provider: StorageProviderDB;
     let config: R2Config | S3Config;
     
-    if (formData.provider === 'r2') {
-      config = {
-        bucket_name: formData.r2_bucket_name,
-        use_binding: formData.r2_use_binding,
-        account_id: formData.r2_account_id,
-        access_key_id: formData.r2_access_key_id,
-        secret_access_key: formData.r2_secret_access_key,
-      };
-    } else {
-      config = {
-        bucket_name: formData.s3_bucket_name,
-        region: formData.s3_region,
-        access_key_id: formData.s3_access_key_id,
-        secret_access_key: formData.s3_secret_access_key,
-        endpoint: formData.s3_endpoint || undefined,
-        force_path_style: formData.s3_force_path_style,
-      };
+    // Map UI provider to DB provider and build config
+    switch (formData.providerUI) {
+      case 'r2-binding':
+        provider = 'r2';
+        config = {
+          bucket_name: formData.bucket_name,
+          use_binding: true,
+        } as R2Config;
+        break;
+        
+      case 'r2-s3':
+        provider = 'r2';
+        config = {
+          bucket_name: formData.bucket_name,
+          use_binding: false,
+          account_id: formData.r2_account_id,
+          access_key_id: formData.access_key_id,
+          secret_access_key: formData.secret_access_key,
+        } as R2Config;
+        break;
+        
+      case 's3':
+        provider = 's3';
+        config = {
+          bucket_name: formData.bucket_name,
+          region: formData.region,
+          access_key_id: formData.access_key_id,
+          secret_access_key: formData.secret_access_key,
+        } as S3Config;
+        break;
+        
+      case 'backblaze':
+        provider = 's3';
+        config = {
+          bucket_name: formData.bucket_name,
+          region: formData.region,
+          endpoint: `https://s3.${formData.region}.backblazeb2.com`,
+          access_key_id: formData.access_key_id,
+          secret_access_key: formData.secret_access_key,
+          force_path_style: false,
+        } as S3Config;
+        break;
+        
+      case 'digitalocean':
+        provider = 's3';
+        config = {
+          bucket_name: formData.bucket_name,
+          region: formData.region,
+          endpoint: `https://${formData.region}.digitaloceanspaces.com`,
+          access_key_id: formData.access_key_id,
+          secret_access_key: formData.secret_access_key,
+          force_path_style: false,
+        } as S3Config;
+        break;
+        
+      case 'vultr':
+        provider = 's3';
+        config = {
+          bucket_name: formData.bucket_name,
+          region: formData.region,
+          endpoint: `https://${formData.region}.vultrobjects.com`,
+          access_key_id: formData.access_key_id,
+          secret_access_key: formData.secret_access_key,
+          force_path_style: true,
+        } as S3Config;
+        break;
+        
+      case 'minio':
+        provider = 's3';
+        config = {
+          bucket_name: formData.bucket_name,
+          region: formData.region || 'us-east-1',
+          endpoint: formData.endpoint,
+          access_key_id: formData.access_key_id,
+          secret_access_key: formData.secret_access_key,
+          force_path_style: true,
+        } as S3Config;
+        break;
+        
+      case 's3-compatible':
+      default:
+        provider = 's3';
+        config = {
+          bucket_name: formData.bucket_name,
+          region: formData.region || 'us-east-1',
+          endpoint: formData.endpoint || undefined,
+          access_key_id: formData.access_key_id,
+          secret_access_key: formData.secret_access_key,
+          force_path_style: formData.force_path_style,
+        } as S3Config;
+        break;
     }
     
-    const data = {
+    const data: CreateBucketInput = {
       name: formData.name,
       description: formData.description || undefined,
-      provider: formData.provider,
+      provider,
       is_default: formData.is_default,
       is_default_chat: formData.is_default_chat,
       is_default_forms: formData.is_default_forms,
@@ -137,42 +311,472 @@ export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
     onSubmit(data);
   };
 
-  return (
-    <Dialog open onOpenChange={() => onClose()}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{bucket ? 'Edit Storage Bucket' : 'Add Storage Bucket'}</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="space-y-4 py-4">
+  const selectedProvider = PROVIDER_OPTIONS.find(p => p.value === formData.providerUI);
+
+  // Render configuration fields based on provider
+  const renderProviderConfig = () => {
+    switch (formData.providerUI) {
+      case 'r2-binding':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="bucket_name">Bucket Name</Label>
+              <Input
+                id="bucket_name"
+                value={formData.bucket_name}
+                onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                placeholder="my-r2-bucket"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Must match the bucket name configured in your wrangler.toml
+              </p>
+            </div>
+          </>
+        );
+        
+      case 'r2-s3':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="bucket_name">Bucket Name</Label>
+              <Input
+                id="bucket_name"
+                value={formData.bucket_name}
+                onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                placeholder="my-r2-bucket"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="r2_account_id">Cloudflare Account ID</Label>
+              <Input
+                id="r2_account_id"
+                value={formData.r2_account_id}
+                onChange={(e) => setFormData({ ...formData, r2_account_id: e.target.value })}
+                placeholder="0460574641fdbb98159c98ebf593e2bd"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="access_key_id">R2 Access Key ID</Label>
+              <Input
+                id="access_key_id"
+                value={formData.access_key_id}
+                onChange={(e) => setFormData({ ...formData, access_key_id: e.target.value })}
+                placeholder="016241efaaf28254809848bad204a7f2"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret_access_key">R2 Secret Access Key</Label>
+              <Input
+                id="secret_access_key"
+                type="password"
+                value={formData.secret_access_key}
+                onChange={(e) => setFormData({ ...formData, secret_access_key: e.target.value })}
+                placeholder="••••••••••••••••"
+                required
+              />
+            </div>
+          </>
+        );
+        
+      case 's3':
+        return (
+          <>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
+                <Label htmlFor="bucket_name">Bucket Name</Label>
                 <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="My Storage Bucket"
+                  id="bucket_name"
+                  value={formData.bucket_name}
+                  onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                  placeholder="my-s3-bucket"
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="provider">Provider</Label>
+                <Label htmlFor="region">Region</Label>
                 <Select
-                  value={formData.provider}
-                  onValueChange={(value: 'r2' | 's3') => setFormData({ ...formData, provider: value })}
+                  value={formData.region}
+                  onValueChange={(value) => setFormData({ ...formData, region: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="r2">Cloudflare R2</SelectItem>
-                    <SelectItem value="s3">Amazon S3</SelectItem>
+                    {AWS_REGIONS.map((region) => (
+                      <SelectItem key={region} value={region}>
+                        {region}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="access_key_id">AWS Access Key ID</Label>
+              <Input
+                id="access_key_id"
+                value={formData.access_key_id}
+                onChange={(e) => setFormData({ ...formData, access_key_id: e.target.value })}
+                placeholder="AKIAIOSFODNN7EXAMPLE"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret_access_key">AWS Secret Access Key</Label>
+              <Input
+                id="secret_access_key"
+                type="password"
+                value={formData.secret_access_key}
+                onChange={(e) => setFormData({ ...formData, secret_access_key: e.target.value })}
+                placeholder="••••••••••••••••"
+                required
+              />
+            </div>
+          </>
+        );
+        
+      case 'backblaze':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bucket_name">Bucket Name</Label>
+                <Input
+                  id="bucket_name"
+                  value={formData.bucket_name}
+                  onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                  placeholder="my-b2-bucket"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="region">Region</Label>
+                <Select
+                  value={formData.region}
+                  onValueChange={(value) => setFormData({ ...formData, region: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BACKBLAZE_REGIONS.map((region) => (
+                      <SelectItem key={region.value} value={region.value}>
+                        {region.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="access_key_id">Application Key ID</Label>
+              <Input
+                id="access_key_id"
+                value={formData.access_key_id}
+                onChange={(e) => setFormData({ ...formData, access_key_id: e.target.value })}
+                placeholder="0050325c9e8a78f0000000001"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret_access_key">Application Key</Label>
+              <Input
+                id="secret_access_key"
+                type="password"
+                value={formData.secret_access_key}
+                onChange={(e) => setFormData({ ...formData, secret_access_key: e.target.value })}
+                placeholder="••••••••••••••••"
+                required
+              />
+            </div>
+          </>
+        );
+        
+      case 'digitalocean':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bucket_name">Space Name</Label>
+                <Input
+                  id="bucket_name"
+                  value={formData.bucket_name}
+                  onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                  placeholder="my-space"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="region">Region</Label>
+                <Select
+                  value={formData.region}
+                  onValueChange={(value) => setFormData({ ...formData, region: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DO_REGIONS.map((region) => (
+                      <SelectItem key={region.value} value={region.value}>
+                        {region.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="access_key_id">Access Key</Label>
+              <Input
+                id="access_key_id"
+                value={formData.access_key_id}
+                onChange={(e) => setFormData({ ...formData, access_key_id: e.target.value })}
+                placeholder="DO00EXAMPLE123KEY"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret_access_key">Secret Key</Label>
+              <Input
+                id="secret_access_key"
+                type="password"
+                value={formData.secret_access_key}
+                onChange={(e) => setFormData({ ...formData, secret_access_key: e.target.value })}
+                placeholder="••••••••••••••••"
+                required
+              />
+            </div>
+          </>
+        );
+        
+      case 'vultr':
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bucket_name">Bucket Name</Label>
+                <Input
+                  id="bucket_name"
+                  value={formData.bucket_name}
+                  onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                  placeholder="my-vultr-bucket"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="region">Region</Label>
+                <Select
+                  value={formData.region}
+                  onValueChange={(value) => setFormData({ ...formData, region: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {VULTR_REGIONS.map((region) => (
+                      <SelectItem key={region.value} value={region.value}>
+                        {region.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="access_key_id">Access Key</Label>
+              <Input
+                id="access_key_id"
+                value={formData.access_key_id}
+                onChange={(e) => setFormData({ ...formData, access_key_id: e.target.value })}
+                placeholder="VULTR123EXAMPLE"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret_access_key">Secret Key</Label>
+              <Input
+                id="secret_access_key"
+                type="password"
+                value={formData.secret_access_key}
+                onChange={(e) => setFormData({ ...formData, secret_access_key: e.target.value })}
+                placeholder="••••••••••••••••"
+                required
+              />
+            </div>
+          </>
+        );
+        
+      case 'minio':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="bucket_name">Bucket Name</Label>
+              <Input
+                id="bucket_name"
+                value={formData.bucket_name}
+                onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                placeholder="my-minio-bucket"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endpoint">MinIO Endpoint URL</Label>
+              <Input
+                id="endpoint"
+                value={formData.endpoint}
+                onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
+                placeholder="https://minio.example.com:9000"
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                Full URL including protocol and port
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="access_key_id">Access Key</Label>
+              <Input
+                id="access_key_id"
+                value={formData.access_key_id}
+                onChange={(e) => setFormData({ ...formData, access_key_id: e.target.value })}
+                placeholder="minioadmin"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret_access_key">Secret Key</Label>
+              <Input
+                id="secret_access_key"
+                type="password"
+                value={formData.secret_access_key}
+                onChange={(e) => setFormData({ ...formData, secret_access_key: e.target.value })}
+                placeholder="••••••••••••••••"
+                required
+              />
+            </div>
+          </>
+        );
+        
+      case 's3-compatible':
+      default:
+        return (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bucket_name">Bucket Name</Label>
+                <Input
+                  id="bucket_name"
+                  value={formData.bucket_name}
+                  onChange={(e) => setFormData({ ...formData, bucket_name: e.target.value })}
+                  placeholder="my-bucket"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="region">Region</Label>
+                <Input
+                  id="region"
+                  value={formData.region}
+                  onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                  placeholder="us-east-1"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endpoint">Endpoint URL (Optional)</Label>
+              <Input
+                id="endpoint"
+                value={formData.endpoint}
+                onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
+                placeholder="https://s3-compatible.example.com"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty for standard AWS S3
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="access_key_id">Access Key ID</Label>
+              <Input
+                id="access_key_id"
+                value={formData.access_key_id}
+                onChange={(e) => setFormData({ ...formData, access_key_id: e.target.value })}
+                placeholder="Access Key ID"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secret_access_key">Secret Access Key</Label>
+              <Input
+                id="secret_access_key"
+                type="password"
+                value={formData.secret_access_key}
+                onChange={(e) => setFormData({ ...formData, secret_access_key: e.target.value })}
+                placeholder="••••••••••••••••"
+                required
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="force_path_style"
+                checked={formData.force_path_style}
+                onCheckedChange={(checked) => setFormData({ ...formData, force_path_style: checked as boolean })}
+              />
+              <Label htmlFor="force_path_style" className="text-sm font-normal">
+                Force path-style URLs (required for some S3-compatible services)
+              </Label>
+            </div>
+          </>
+        );
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={() => onClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{bucket ? 'Edit Storage Bucket' : 'Add Storage Bucket'}</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit}>
+          <div className="space-y-4 py-4">
+            {/* Name field - full width */}
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="My Storage Bucket"
+                required
+              />
+            </div>
             
+            {/* Provider dropdown - full width */}
+            <div className="space-y-2">
+              <Label htmlFor="provider">Provider</Label>
+              <Select
+                value={formData.providerUI}
+                onValueChange={(value: StorageProviderUI) => setFormData({ ...formData, providerUI: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROVIDER_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="text-xs text-muted-foreground">{option.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Description field - full width */}
             <div className="space-y-2">
               <Label htmlFor="description">Description (Optional)</Label>
               <Textarea
@@ -184,7 +788,24 @@ export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
               />
             </div>
             
-            <div className="space-y-2">
+            {/* Provider-specific help text */}
+            {selectedProvider && (
+              <Alert>
+                <InfoIcon className="h-4 w-4" />
+                <AlertDescription>
+                  {selectedProvider.helpText}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {/* Dynamic configuration section */}
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="text-sm font-medium">Configuration</h3>
+              {renderProviderConfig()}
+            </div>
+            
+            {/* Default settings at the bottom */}
+            <div className="space-y-2 border-t pt-4">
               <Label>Default Settings</Label>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2">
@@ -219,145 +840,6 @@ export function BucketForm({ bucket, onSubmit, onClose }: BucketFormProps) {
                 </div>
               </div>
             </div>
-            
-            <Tabs value={formData.provider} className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="r2" disabled={formData.provider !== 'r2'}>R2 Configuration</TabsTrigger>
-                <TabsTrigger value="s3" disabled={formData.provider !== 's3'}>S3 Configuration</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="r2" className="space-y-4 mt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="r2_bucket_name">Bucket Name</Label>
-                  <Input
-                    id="r2_bucket_name"
-                    value={formData.r2_bucket_name}
-                    onChange={(e) => setFormData({ ...formData, r2_bucket_name: e.target.value })}
-                    placeholder="my-r2-bucket"
-                    required={formData.provider === 'r2'}
-                  />
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="r2_use_binding"
-                    checked={formData.r2_use_binding}
-                    onCheckedChange={(checked) => setFormData({ ...formData, r2_use_binding: checked as boolean })}
-                  />
-                  <Label htmlFor="r2_use_binding" className="text-sm font-normal">
-                    Use Cloudflare binding (recommended for default bucket)
-                  </Label>
-                </div>
-                
-                {!formData.r2_use_binding && (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="r2_account_id">Account ID</Label>
-                      <Input
-                        id="r2_account_id"
-                        value={formData.r2_account_id}
-                        onChange={(e) => setFormData({ ...formData, r2_account_id: e.target.value })}
-                        placeholder="Your Cloudflare Account ID"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="r2_access_key_id">Access Key ID</Label>
-                      <Input
-                        id="r2_access_key_id"
-                        value={formData.r2_access_key_id}
-                        onChange={(e) => setFormData({ ...formData, r2_access_key_id: e.target.value })}
-                        placeholder="R2 Access Key ID"
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="r2_secret_access_key">Secret Access Key</Label>
-                      <Input
-                        id="r2_secret_access_key"
-                        type="password"
-                        value={formData.r2_secret_access_key}
-                        onChange={(e) => setFormData({ ...formData, r2_secret_access_key: e.target.value })}
-                        placeholder="R2 Secret Access Key"
-                      />
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-              
-              <TabsContent value="s3" className="space-y-4 mt-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="s3_bucket_name">Bucket Name</Label>
-                    <Input
-                      id="s3_bucket_name"
-                      value={formData.s3_bucket_name}
-                      onChange={(e) => setFormData({ ...formData, s3_bucket_name: e.target.value })}
-                      placeholder="my-s3-bucket"
-                      required={formData.provider === 's3'}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="s3_region">Region</Label>
-                    <Input
-                      id="s3_region"
-                      value={formData.s3_region}
-                      onChange={(e) => setFormData({ ...formData, s3_region: e.target.value })}
-                      placeholder="us-east-1"
-                      required={formData.provider === 's3'}
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="s3_access_key_id">Access Key ID</Label>
-                  <Input
-                    id="s3_access_key_id"
-                    value={formData.s3_access_key_id}
-                    onChange={(e) => setFormData({ ...formData, s3_access_key_id: e.target.value })}
-                    placeholder="AKIAIOSFODNN7EXAMPLE"
-                    required={formData.provider === 's3'}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="s3_secret_access_key">Secret Access Key</Label>
-                  <Input
-                    id="s3_secret_access_key"
-                    type="password"
-                    value={formData.s3_secret_access_key}
-                    onChange={(e) => setFormData({ ...formData, s3_secret_access_key: e.target.value })}
-                    placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                    required={formData.provider === 's3'}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="s3_endpoint">Custom Endpoint (Optional)</Label>
-                  <Input
-                    id="s3_endpoint"
-                    value={formData.s3_endpoint}
-                    onChange={(e) => setFormData({ ...formData, s3_endpoint: e.target.value })}
-                    placeholder="https://s3-compatible.example.com"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    For S3-compatible services like MinIO, Backblaze B2, etc.
-                  </p>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="s3_force_path_style"
-                    checked={formData.s3_force_path_style}
-                    onCheckedChange={(checked) => setFormData({ ...formData, s3_force_path_style: checked as boolean })}
-                  />
-                  <Label htmlFor="s3_force_path_style" className="text-sm font-normal">
-                    Force path-style URLs (required for some S3-compatible services)
-                  </Label>
-                </div>
-              </TabsContent>
-            </Tabs>
           </div>
           
           <DialogFooter>
