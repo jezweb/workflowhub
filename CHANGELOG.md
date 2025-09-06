@@ -5,6 +5,28 @@ All notable changes to WorkflowHub will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.7.0] - 2025-01-06
+
+### Added
+- **Dynamic LLM Model Selection**: Live model fetching from OpenRouter API
+  - Searchable model selector with 100+ available models
+  - Models organized by provider (OpenAI, Anthropic, Google, etc.)
+  - Primary and fallback model support for reliability
+  - Context length display for each model
+  - Always up-to-date with latest available models
+  - Fallback list of popular models if API unavailable
+
+### Changed
+- Agent configuration now uses full model IDs (e.g., "openai/gpt-4o")
+- Replaced hardcoded model dropdown with dynamic ModelSelector component
+- Default agent templates updated with current model IDs
+
+### Technical
+- Added `/api/agents/openrouter/models` endpoint for model fetching
+- New `fallback_model` column in agents table
+- Created reusable ModelSelector component with Command + Popover UI
+- Migration: `0003_agent_fallback_model.sql`
+
 ## [2.6.0] - 2025-01-06
 
 ### Added

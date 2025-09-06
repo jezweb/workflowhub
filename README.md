@@ -52,6 +52,10 @@ A modern business workflow management dashboard built on Cloudflare's edge platf
 ### 💬 Chat System
 - **Conversation Groups** - Organize chats by project/topic with custom icons and colors
 - **Agent Integration** - Each group uses a specific AI agent with shared context
+- **Dynamic Model Selection** - Live model list from OpenRouter API with 100+ LLMs
+  - Searchable model selector with provider grouping
+  - Primary and fallback model support for reliability
+  - Always up-to-date with latest available models
 - **Rich Messaging** - Support for text, code, and file attachments
 - **n8n Webhook Integration** - Process messages through your custom workflows
 - **Resizable UI** - Flexible layout with collapsible panels
