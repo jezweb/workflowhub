@@ -15,7 +15,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import type { OpenRouterModel } from '@/types/agent';
 
 interface ModelSelectorProps {
@@ -119,39 +118,37 @@ export function ModelSelector({
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
-          <CommandList>
+          <CommandList className="max-h-[300px] overflow-auto">
             <CommandEmpty>No models found.</CommandEmpty>
-            <ScrollArea className="h-[300px]">
-              {Array.from(filteredProviders.entries()).map(([provider, providerModels]) => (
-                <CommandGroup key={provider} heading={provider.toUpperCase()}>
-                  {providerModels.map((model) => (
-                    <CommandItem
-                      key={model.id}
-                      value={model.id}
-                      onSelect={(currentValue) => {
-                        onChange(currentValue === value ? '' : currentValue);
-                        setOpen(false);
-                        setSearchQuery('');
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value === model.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <div className="flex flex-col flex-1">
-                        <span className="text-sm">{model.name}</span>
-                        <span className="text-xs text-muted-foreground">
-                          Context: {formatContextLength(model.context_length)}
-                          {model.max_tokens && ` • Max output: ${formatContextLength(model.max_tokens)}`}
-                        </span>
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              ))}
-            </ScrollArea>
+            {Array.from(filteredProviders.entries()).map(([provider, providerModels]) => (
+              <CommandGroup key={provider} heading={provider.toUpperCase()}>
+                {providerModels.map((model) => (
+                  <CommandItem
+                    key={model.id}
+                    value={model.id}
+                    onSelect={(currentValue) => {
+                      onChange(currentValue === value ? '' : currentValue);
+                      setOpen(false);
+                      setSearchQuery('');
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === model.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-col flex-1">
+                      <span className="text-sm">{model.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        Context: {formatContextLength(model.context_length)}
+                        {model.max_tokens && ` • Max output: ${formatContextLength(model.max_tokens)}`}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </PopoverContent>
