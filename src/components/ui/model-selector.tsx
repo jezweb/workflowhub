@@ -118,7 +118,7 @@ export function ModelSelector({
             value={searchQuery}
             onValueChange={setSearchQuery}
           />
-          <CommandList className="max-h-[300px] overflow-auto">
+          <CommandList>
             <CommandEmpty>No models found.</CommandEmpty>
             {Array.from(filteredProviders.entries()).map(([provider, providerModels]) => (
               <CommandGroup key={provider} heading={provider.toUpperCase()}>
